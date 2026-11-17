@@ -67,10 +67,32 @@ static func _swap_visual_model(visual_root: Node3D, skin_id: String, arch: Dicti
 		existing.queue_free()
 	else:
 		inst.rotation.y = PI
+	if skin_id in ["valkyrie_skull", "white_reaper", "anubis_phantom"] and inst.get_node_or_null("Armature_Isabela") == null:
+		_fit_skin_height(inst, 1.72)
 	inst.name = "SK_Isabela"
 	inst.set_meta("skin_id", skin_id)
 	visual_root.add_child(inst)
 	return inst
+
+
+static func _fit_skin_height(inst: Node3D, target_h: float) -> void:
+	var min_y := INF; var max_y := -INF
+	for m in inst.find_children("*", "MeshInstance3D", true, false):
+		var a := (m as MeshInstance3D).get_aabb()
+		min_y = minf(min_y, a.position.y); max_y = maxf(max_y, a.end.y)
+	if min_y < INF and max_y > min_y:
+		var s := target_h / maxf(0.01, max_y - min_y)
+		inst.scale = Vector3.ONE * s; inst.position.y = -min_y * s
+
+
+static func tick_boss_skin_anim(anim: AnimationPlayer, velocity: Vector3, attacking: bool) -> void:
+	if anim == null or not is_instance_valid(anim): return
+	for ln in ["Idle", "Run"]:
+		if anim.has_animation(ln): anim.get_animation(ln).loop_mode = Animation.LOOP_LINEAR
+	var h_spd := Vector2(velocity.x, velocity.z).length()
+	var target := "Attack" if attacking and anim.has_animation("Attack") else ("Run" if h_spd > 0.35 and anim.has_animation("Run") else "Idle")
+	if anim.has_animation(target) and anim.current_animation != target:
+		anim.play(target, 0.10)
 
 
 static func _apply_submesh_or_tint(model: Node3D, skin_id: String, mode: String) -> void:
@@ -84,7 +106,7 @@ static func _apply_submesh_or_tint(model: Node3D, skin_id: String, mode: String)
 				mesh_node.visible = (mode == "jacket" or mode == "top")
 			elif "lingerie" in nm or "bra" in nm or "panty" in nm:
 				mesh_node.visible = (mode == "lingerie")
-	elif BOSS_TINTS.has(skin_id) and mode == "boss_fallback":
+	elif BOSS_TINTS.has(skin_id) and mode == "boss_fallback" and model.get_node_or_null("Armature_Isabela") != null:
 		var tint: Color = BOSS_TINTS[skin_id]
 		for m in model.find_children("*", "MeshInstance3D", true, false):
 			var mi := m as MeshInstance3D

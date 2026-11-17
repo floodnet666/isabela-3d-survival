@@ -58,6 +58,12 @@ func _test_boss_rotation_and_enrage() -> bool:
 	boss.call("configure_from_balance", "white_reaper", db, spec, player)
 	var bmodel := boss.get_node_or_null("BossModel") as Node3D
 	ok = _assert(bmodel != null and bmodel.scale.y > 2.0 and bmodel.position.y > 0.5, "White Reaper .glb loaded, scaled and grounded") and ok
+	var b_anim := bmodel.find_child("AnimationPlayer", true, false) as AnimationPlayer if bmodel != null else null
+	for req_anim in ["Idle", "Run", "Attack", "Guard_Stance", "Sword_Slam", "Stagger_Core", "Enrage_Roar"]:
+		ok = _assert(b_anim != null and b_anim.has_animation(req_anim), "Reaper has animation: " + req_anim) and ok
+	var bvis: Dictionary = boss.get("_vis")
+	var sh_node := bvis.get("shield") as MeshInstance3D
+	ok = _assert(sh_node != null and sh_node.mesh is TorusMesh and not (sh_node.mesh is BoxMesh), "Guard shield uses TorusMesh (not BoxMesh)") and ok
 
 	var enrage_state := {"salvo": 0}
 	boss.connect("enraged", func(_id: String, salvo: int) -> void: enrage_state["salvo"] = salvo)
@@ -151,8 +157,12 @@ func _test_skins_and_archetypes() -> bool:
 	root.add_child(player)
 	await process_frame
 	player.call("configure", db, upg, loadout)
-	for sid in ["leeloo", "isabela_jacket", "isabela_top", "isabela_lingerie", "valkyrie_skull", "white_reaper", "anubis_phantom"]:
+	for sid in ["leeloo", "isabela_jacket", "isabela_top", "isabela_lingerie", "valkyrie_skull", "anubis_phantom", "white_reaper"]:
 		PlayerSkinHelperRef.apply_skin_and_helmet(player, sid, "helmet_a", db, player.get_node_or_null("PlayerAnimator"), player.get_node_or_null("WeaponManager"))
+	var pa := player.get_node_or_null("PlayerAnimator")
+	var wr_model := player.get_node_or_null("VisualRoot/SK_Isabela") as Node3D
+	ok = _assert(pa != null and pa.call("get_weapon_socket") != null, "White Reaper playable skin binds WeaponSocket without errors") and ok
+	ok = _assert(wr_model != null and not is_equal_approx(wr_model.scale.y, 1.0), "White Reaper playable skin height normalized to 1.72m") and ok
 	var wm := player.get_node_or_null("WeaponManager")
 	var pool = wm.get("_tps_pool") if wm != null else null
 	ok = _assert(pool != null and int(pool.call("get_count")) >= 7, "WeaponPoolHelper preserves >= 7 pooled weapons after skin swaps") and ok

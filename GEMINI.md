@@ -57,7 +57,7 @@ res://
 ---
 
 ## 3. Invariantes e Contratos Obrigatórios
-1. **Regra dos `< 300` linhas (CI Gate):** Todo arquivo em `scripts/game/*.gd` DEVE ter **estritamente menos de 300 linhas**. Atenção especial a `arena_coordinator.gd` (`299`), `player_animator.gd` (`299`), `player_controller.gd` (`298`), `weapon_manager.gd` (`298`), `hud_controller.gd` (`297`), `enemy_droid.gd` (`296`), `weapon_loadout.gd` (`292`) e `settings_modal_ui.gd` (`291`) — **sempre criar novos helpers em vez de inflar esses arquivos**.
+1. **Regra dos `< 300` linhas (CI Gate):** Todo arquivo em `scripts/game/*.gd` DEVE ter **estritamente menos de 300 linhas**. Atenção especial a `arena_coordinator.gd` (`299`), `player_controller.gd` (`298`), `weapon_manager.gd` (`298`), `hud_controller.gd` (`297`), `enemy_droid.gd` (`296`), `weapon_loadout.gd` (`292`), `settings_modal_ui.gd` (`291`) e `player_animator.gd` (`290`) — **sempre criar novos helpers em vez de inflar esses arquivos**.
 2. **Proteção de Cenas/Assets Base:** NÃO modificar `assets/SK_Isabela/SK_Isabela.glb`, `scenes/main_isabela_scene.tscn` ou `scenes/test_fase1..5_*.tscn` sem solicitação explícita e verificação regressiva.
 3. **Otimização & VRAM:**
    - Toda textura 3D nova em `assets/` deve ser importada com `compress/mode=2` (`VRAM Compressed`) e `process/size_limit` (`1024` ou `2048`), nunca `compress/mode=0` sem compressão.
@@ -116,6 +116,7 @@ Get-ChildItem scripts\game\*.gd | ForEach-Object {
     - `SM_Helmet_A`/`B` encaixados na cabeça (`Vector3(0, -0.185, 0.015)`), ocultam `SK_Isabela_Hair` ao equipar e concedem **escudo de `30%` do HP máx.** (absorve dano, quebra ao zerar e dropa na arena);
     - Correções nos boosters da **Arma Laser** (`regen_delay_left` acelera com `reload_speed` e feixe visual perfurante estende até `max_r`);
     - **Ciclo Dia/Noite (`day_night_cycle.gd`)** na proporção **`1 min real = 2h no jogo`** + relógio no topo do HUD;
-    - Correção da coroa de cabelo no `SK_Isabela_Leeloo.glb` via Blender (scalp recuado + mechas reais duplicadas).
+    - Correção da coroa de cabelo no `SK_Isabela_Leeloo.glb` via Blender (scalp recuado + mechas reais duplicadas);
+    - **Fechamento Trilha 3 (Pontos 1, 3, 4 & Escudo Reaper):** `SK_Boss_Reaper.glb` com 7 animações (`Guard_Stance`, `Sword_Slam`, `Stagger_Core`, `Enrage_Roar`), `TorusMesh` no escudo de guarda (sem retângulo azul), VFX âmbar no `Shadow Blink` do Anubis e suporte completo a skin jogável de Boss (`WeaponSocket` via `Forearm.R` + escala `1.72 m` + `tick_boss_skin_anim`).
 - **Próximas etapas planejadas:**
   - Adicionar modelos `.glb` finais para `SK_Boss_Valkyrie` e `SK_Boss_Anubis` em `assets/` (seguindo `docs/TRILHA_3_PLAN.md` e `docs/references/`).

@@ -150,8 +150,10 @@ func _finish_guard_or_blink() -> void:
 	if is_blinking_telegraph:
 		is_blinking_telegraph = false
 		if _player != null and is_instance_valid(_player):
+			var old_pos := global_position
 			var back := _player.global_transform.basis.z.normalized() * 3.0
 			global_position = _player.global_position + Vector3(back.x, 0.2, back.z)
+			BossVisualsRef.spawn_blink_vfx(get_tree().current_scene if is_inside_tree() else null, old_pos, global_position)
 			_pending_attack = "melee"; _execute_attack((_player.global_position - global_position).normalized())
 	state = BossState.CHASE
 
@@ -215,6 +217,7 @@ func take_damage(amount: float, impulse: Vector3 = Vector3.ZERO, is_crit: bool =
 	hp_updated.emit(current_hp, max_hp); took_damage.emit(dmg, is_crit)
 	if not is_enraged and current_hp > 0.0 and current_hp <= max_hp * float(_bosses_cfg.get("enrage_hp_ratio", 0.5)):
 		is_enraged = true; move_speed_mps = base_speed_mps * float(_bosses_cfg.get("enrage_speed_mult", 1.25))
+		BossVisualsRef.trigger_enrage_roar(_vis)
 		enraged.emit(enemy_id, int(_bosses_cfg.get("enrage_salvo_count", 4)))
 	if current_hp <= 0.0:
 		_dead = true; died.emit(self, enemy_id, xp_reward, score_reward, 0.0, global_position); queue_free()

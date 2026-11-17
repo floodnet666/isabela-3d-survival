@@ -56,7 +56,7 @@ static func tick_visual(vis: Dictionary, delta: float, boss: CharacterBody3D, tu
 	var st := int(boss.get("state"))
 	var anim := vis.get("anim") as AnimationPlayer
 	var has_skel_run := anim != null and is_instance_valid(anim) and anim.has_animation("Run")
-	_tick_skeletal_anim(vis, anim, st, horiz_speed, impact_timer)
+	_tick_skeletal_anim(vis, anim, boss, st, horiz_speed, impact_timer, pending_attack)
 
 	# 2. Heavy hydraulic stride/hover cadence (subtle when skeletal Run is driving limbs)
 	if horiz_speed > 0.35 and st == 0:
@@ -104,16 +104,33 @@ static func tick_visual(vis: Dictionary, delta: float, boss: CharacterBody3D, tu
 
 static func _setup_anim_loops(anim: AnimationPlayer) -> void:
 	if anim == null or not is_instance_valid(anim): return
-	for ln in ["Run", "Idle"]:
+	for ln in ["Run", "Idle", "Guard_Stance", "Stagger_Core"]:
 		if anim.has_animation(ln): anim.get_animation(ln).loop_mode = Animation.LOOP_LINEAR
 	if anim.has_animation("Idle"): anim.play("Idle")
 
 
-static func _tick_skeletal_anim(vis: Dictionary, anim: AnimationPlayer, st: int, horiz_speed: float, impact_timer: float) -> void:
+static func trigger_enrage_roar(vis: Dictionary) -> void:
+	var anim := vis.get("anim") as AnimationPlayer
+	if anim != null and is_instance_valid(anim) and anim.has_animation("Enrage_Roar"):
+		vis["roar_left"] = 1.15
+		vis["last_anim"] = "Enrage_Roar"
+		anim.play("Enrage_Roar", 0.08)
+
+
+static func _tick_skeletal_anim(vis: Dictionary, anim: AnimationPlayer, boss: CharacterBody3D, st: int, horiz_speed: float, impact_timer: float, pending_attack: String) -> void:
 	if anim == null or not is_instance_valid(anim): return
+	var roar_left := maxf(0.0, float(vis.get("roar_left", 0.0)) - 0.016)
+	vis["roar_left"] = roar_left
+	if roar_left > 0.0 and anim.has_animation("Enrage_Roar") and anim.is_playing():
+		return
 	var target := "Idle"; var spd := 1.0
-	if (st == 3 or impact_timer > 0.0) and anim.has_animation("Attack"):
-		target = "Attack"; spd = 1.05
+	if bool(boss.get("is_guarding")) and anim.has_animation("Guard_Stance"):
+		target = "Guard_Stance"
+	elif st == 2 and anim.has_animation("Stagger_Core"):
+		target = "Stagger_Core"
+	elif st == 3 or impact_timer > 0.0:
+		target = "Sword_Slam" if (pending_attack == "slam" and anim.has_animation("Sword_Slam")) else "Attack"
+		spd = 1.05
 	elif st == 0 and horiz_speed > 0.35 and anim.has_animation("Run"):
 		target = "Run"; spd = clampf(horiz_speed / 5.2, 0.75, 1.85)
 	if not anim.has_animation(target): return
@@ -147,8 +164,9 @@ static func _tick_auras(vis: Dictionary, anim_t: float, guarding: bool, enraged:
 
 
 static func _build_combat_fx(root: Node3D, height_m: float) -> Dictionary:
-	var shield := _make_fx_mesh(BoxMesh.new(), Color(0.35, 0.85, 1.0, 0.32), Vector3(0.0, height_m * 0.48, -0.82), root)
-	(shield.mesh as BoxMesh).size = Vector3(1.55, height_m * 0.72, 0.08)
+	var shield_torus := TorusMesh.new(); shield_torus.inner_radius = 0.52; shield_torus.outer_radius = 0.68
+	var shield := _make_fx_mesh(shield_torus, Color(1.0, 0.38, 0.14, 0.42), Vector3(0.0, height_m * 0.50, -0.45), root)
+	shield.rotation_degrees.x = 90.0
 	var ring_mesh := TorusMesh.new()
 	ring_mesh.inner_radius = 0.68; ring_mesh.outer_radius = 0.84
 	var ring := _make_fx_mesh(ring_mesh, Color(1.0, 0.14, 0.16, 0.55), Vector3(0.0, 0.14, 0.0), root)
@@ -218,6 +236,19 @@ static func spawn_shockwave(scene: Node, pos: Vector3, radius: float, color: Col
 	tw.tween_property(ring, "scale", Vector3(radius, 1.0, radius), 0.35)
 	tw.tween_property(ring.material_override, "albedo_color:a", 0.0, 0.35)
 	tw.chain().tween_callback(ring.queue_free)
+
+
+static func spawn_blink_vfx(scene: Node, from_pos: Vector3, to_pos: Vector3) -> void:
+	if scene == null: return
+	for p in [from_pos, to_pos]:
+		var cyl := CylinderMesh.new(); cyl.top_radius = 0.15; cyl.bottom_radius = 0.55; cyl.height = 2.2
+		var fx := _make_fx_mesh(cyl, Color(1.0, 0.72, 0.15, 0.75), Vector3(p.x, p.y + 1.1, p.z), scene as Node3D)
+		fx.visible = true
+		var tw := fx.create_tween(); tw.set_parallel(true)
+		tw.tween_property(fx, "scale", Vector3(1.6, 1.35, 1.6), 0.32)
+		tw.tween_property(fx.material_override, "albedo_color:a", 0.0, 0.32)
+		tw.chain().tween_callback(fx.queue_free)
+		spawn_shockwave(scene, p, 2.4, Color(1.0, 0.72, 0.15, 0.85))
 
 
 static func bind_boss_to_arena(boss: Node3D, wave: int, dname: String, spawner: Node, gm: Node, hud: Node) -> void:

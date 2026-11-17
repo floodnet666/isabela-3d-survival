@@ -1,5 +1,12 @@
 # CHANGELOG — Projeto Isabela 3D
 
+## [2026-11-17 16:07] Trilha 3 (Pontos 1, 3, 4) & Correção do Escudo Azul do White Reaper
+- **Backups criados**: `.backups/*.20261117_160359.bak` para `SK_Boss_Reaper.glb`, `{boss_visuals_helper,boss_sentinel,player_animator,player_skin_helper}.gd`, `test_trilha_3_boss_skins_radar.gd` e `CHANGELOG.md`.
+- **Animações Exclusivas no Blender ([SK_Boss_Reaper.glb](file:///D:/Godot/isabela_scene_test/assets/SK_Boss_Reaper/SK_Boss_Reaper.glb))**: adicionadas `Guard_Stance`, `Sword_Slam`, `Stagger_Core` e `Enrage_Roar` via NLA tracks em `ReaperArmature`, ligadas em [boss_visuals_helper.gd](file:///D:/Godot/isabela_scene_test/scripts/game/boss_visuals_helper.gd) e `trigger_enrage_roar()` em [boss_sentinel.gd](file:///D:/Godot/isabela_scene_test/scripts/game/boss_sentinel.gd).
+- **Correção do Retângulo Azulado & VFX Shadow Blink**: substituído o `BoxMesh` azul de guarda (`boss_visuals_helper.gd`) por um `TorusMesh` energético circular (`Color(1.0, 0.38, 0.14, 0.42)`), e adicionado `spawn_blink_vfx()` âmbar na origem e destino do teleporte `Shadow Blink` do Anubis Phantom.
+- **Skin Jogável de Boss ([player_animator.gd](file:///D:/Godot/isabela_scene_test/scripts/game/player_animator.gd), `290`L & [player_skin_helper.gd](file:///D:/Godot/isabela_scene_test/scripts/game/player_skin_helper.gd))**: suporte genérico a `Skeleton3D` sem `Armature_Isabela`, fallback de osso da arma (`RightHand` → `Forearm.R`), normalização de altura (`1.72 m`), preservação das texturas PBR do Reaper e driver `tick_boss_skin_anim()`.
+- **Testes & Local Swarm Bridge**: `delegate_small_tasks` tentado no Ollama (`qwen2.5:7b`, fallback em nuvem por timeout `45s`); [test_trilha_3_boss_skins_radar.gd](file:///D:/Godot/isabela_scene_test/tests/test_trilha_3_boss_skins_radar.gd) ampliado e passando sem nenhum erro de console.
+
 ## [2026-11-17 15:31] Correção Real do Cabelo na Malha 3D (`SK_Isabela_Leeloo.glb` no Blender) & Atualização de `GEMINI.md`
 - **Documentação ([GEMINI.md](file:///D:/Godot/isabela_scene_test/GEMINI.md))**: atualizado mapa para `46` scripts e `19` suítes de teste, registrando Mechs animados (`5/10/15/20`), escudo de 30% nos capacetes, correções da Arma Laser, Ciclo Dia/Noite (`1 min = 2h`) e correção do cabelo da Leeloo (backup em `.backups/GEMINI.md.*.bak`).
 - **Backups criados**: `.backups/SK_Isabela_Leeloo.glb.20261117_152956.bak` e atualização de [player_skin_helper.gd](file:///D:/Godot/isabela_scene_test/scripts/game/player_skin_helper.gd).

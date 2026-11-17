@@ -36,30 +36,26 @@ func bind_isabela(isabela_root: Node3D) -> void:
 	_isabela_root = isabela_root
 	_skeleton = isabela_root.get_node_or_null("Armature_Isabela/Skeleton3D") as Skeleton3D
 	if _skeleton == null:
-		push_error("PlayerAnimator: Skeleton3D not found under SK_Isabela")
-		return
+		var sks := isabela_root.find_children("*", "Skeleton3D", true, false)
+		_skeleton = sks[0] as Skeleton3D if not sks.is_empty() else null
+	if _skeleton == null:
+		push_error("PlayerAnimator: Skeleton3D not found under SK_Isabela"); return
 	_body_mesh = _skeleton.get_node_or_null("SK_Isabela_Body") as MeshInstance3D
-	_meshes.clear()
-	_collect_meshes(isabela_root)
-	_rest_locals.clear()
-	_rest_globals.clear()
+	_meshes.clear(); _collect_meshes(isabela_root)
+	_rest_locals.clear(); _rest_globals.clear()
 	for i in range(_skeleton.get_bone_count()):
 		var bname := _skeleton.get_bone_name(i)
 		_rest_locals[bname] = _skeleton.get_bone_rest(i).basis
 		_rest_globals[bname] = _skeleton.get_bone_global_rest(i).basis
-
 	var attach := _skeleton.get_node_or_null("RightHandAttachment") as BoneAttachment3D
 	if attach == null:
-		attach = BoneAttachment3D.new()
-		attach.name = "RightHandAttachment"
-		attach.bone_name = "RightHand"
+		attach = BoneAttachment3D.new(); attach.name = "RightHandAttachment"
+		attach.bone_name = "RightHand" if _skeleton.find_bone("RightHand") >= 0 else ("Forearm.R" if _skeleton.find_bone("Forearm.R") >= 0 else _skeleton.get_bone_name(0))
 		_skeleton.add_child(attach)
 	_weapon_socket = attach.get_node_or_null("WeaponSocket") as Node3D
 	if _weapon_socket == null:
-		_weapon_socket = Node3D.new()
-		_weapon_socket.name = "WeaponSocket"
-		_weapon_socket.position = Vector3(-0.096, 0.064, 0.100)
-		_weapon_socket.rotation = Vector3(1.35, 0.54, -0.26)
+		_weapon_socket = Node3D.new(); _weapon_socket.name = "WeaponSocket"
+		_weapon_socket.position = Vector3(-0.096, 0.064, 0.100); _weapon_socket.rotation = Vector3(1.35, 0.54, -0.26)
 		attach.add_child(_weapon_socket)
 	var top_mesh := _skeleton.get_node_or_null("SK_Isabela_Top") as MeshInstance3D
 	if top_mesh != null:
@@ -75,21 +71,17 @@ func bind_isabela(isabela_root: Node3D) -> void:
 
 
 func _setup_animation_tree() -> void:
+	if _skeleton.find_bone("Hips") == -1:
+		_has_anim_tree = false; _anim_tree = null
+		_anim_player = _isabela_root.find_child("AnimationPlayer", true, false) as AnimationPlayer
+		return
 	var res := AnimLoaderRef.setup_isabela_anim_tree(_isabela_root, ANIMS_GLB_PATH)
-	_anim_player = res["player"]
-	_anim_tree = res["tree"]
-	_clips = res["clips"]
+	_anim_player = res["player"]; _anim_tree = res["tree"]; _clips = res["clips"]
 	_has_anim_tree = _anim_tree != null and not _clips.is_empty()
 
-
-func has_animation_clip(clip_name: String) -> bool:
-	return _clips.has(clip_name)
-
-func get_skeleton() -> Skeleton3D:
-	return _skeleton
-
-func get_weapon_socket() -> Node3D:
-	return _weapon_socket
+func has_animation_clip(clip_name: String) -> bool: return _clips.has(clip_name)
+func get_skeleton() -> Skeleton3D: return _skeleton
+func get_weapon_socket() -> Node3D: return _weapon_socket
 
 func set_first_person_shadow_only(enabled: bool) -> void:
 	var mode := GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY if enabled else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
@@ -225,6 +217,9 @@ func _fire_upper_action(action_name: String) -> void:
 
 
 func _apply_procedural_fallback(delta: float, velocity: Vector3, on_floor: bool, is_dashing: bool, recoil: float, melee_prog: float, combo_step: int, weapon_id: String) -> void:
+	if _anim_player != null and _skeleton.find_bone("Hips") == -1:
+		preload("res://scripts/game/player_skin_helper.gd").tick_boss_skin_anim(_anim_player, velocity, melee_prog > 0.01 or recoil > 0.25)
+		return
 	var h_speed := Vector2(velocity.x, velocity.z).length()
 	_walk_phase = fmod(_walk_phase + delta * (clampf(h_speed * 1.45, 3.0, 12.0) if h_speed > 0.25 and on_floor else 1.6), TAU)
 	var mb := clampf(h_speed / 5.8, 0.0, 1.35) if on_floor else 0.35
@@ -259,12 +254,8 @@ func _apply_char_rot(bone_name: String, euler_xyz: Vector3, additive: bool = fal
 	_skeleton.set_bone_pose_rotation(idx, (base * (rg.inverse() * cr * rg)).get_rotation_quaternion())
 
 
-func _set_char_rot(bone_name: String, euler_xyz: Vector3) -> void:
-	_apply_char_rot(bone_name, euler_xyz, false)
-
-
-func _add_char_delta(bone_name: String, euler_xyz: Vector3) -> void:
-	_apply_char_rot(bone_name, euler_xyz, true)
+func _set_char_rot(bone_name: String, euler_xyz: Vector3) -> void: _apply_char_rot(bone_name, euler_xyz, false)
+func _add_char_delta(bone_name: String, euler_xyz: Vector3) -> void: _apply_char_rot(bone_name, euler_xyz, true)
 
 
 func _collect_meshes(node: Node) -> void:
