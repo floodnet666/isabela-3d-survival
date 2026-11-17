@@ -11,11 +11,13 @@ const DuneBackdropRef := preload("res://scripts/game/dune_backdrop.gd")
 const ARENA_SCENE_PATH := "res://scenes/game/playable_arena.tscn"
 
 var _play_btn: Button
+var _skin_btn: Button
 var _settings_btn: Button
 var _howto_btn: Button
 var _quit_btn: Button
 var _fullscreen_btn: Button
 var _settings_modal: SettingsModalRef
+var _skin_modal: ColorRect
 var _howto_panel: ColorRect
 var _howto_close_btn: Button
 var _audio: AudioManagerRef
@@ -69,6 +71,9 @@ func _ensure_ui() -> void:
 	_settings_modal.name = "SettingsModal"
 	_settings_modal.closed.connect(_on_submodal_closed)
 	add_child(_settings_modal)
+	_skin_modal = preload("res://scripts/game/skin_selector_modal_ui.gd").new()
+	_skin_modal.closed.connect(_on_submodal_closed)
+	add_child(_skin_modal)
 
 
 func _build_title_and_menu() -> void:
@@ -111,6 +116,12 @@ func _build_title_and_menu() -> void:
 	_play_btn = _make_menu_button("INICIAR MISSÃO", true)
 	_play_btn.pressed.connect(_on_play_pressed)
 	vbox.add_child(_play_btn)
+
+	_skin_btn = _make_menu_button("VISUAL & ARQUÉTIPOS", false)
+	_skin_btn.pressed.connect(func() -> void:
+		if _skin_modal != null: _skin_modal.call("open")
+	)
+	vbox.add_child(_skin_btn)
 
 	_settings_btn = _make_menu_button("CONFIGURAÇÕES", false)
 	_settings_btn.pressed.connect(_on_settings_pressed)
@@ -262,28 +273,15 @@ func _on_play_pressed() -> void:
 	if is_inside_tree():
 		get_tree().paused = false
 		get_tree().change_scene_to_file(ARENA_SCENE_PATH)
-
-
 func _on_settings_pressed() -> void:
-	if _settings_modal != null:
-		_settings_modal.open()
-
-
+	if _settings_modal != null: _settings_modal.open()
 func _on_howto_pressed() -> void:
 	if _howto_panel != null:
 		_howto_panel.visible = true
-		if _howto_close_btn != null and is_inside_tree():
-			_howto_close_btn.grab_focus()
-
-
+		if _howto_close_btn != null and is_inside_tree(): _howto_close_btn.grab_focus()
 func _on_submodal_closed() -> void:
-	if _howto_panel != null:
-		_howto_panel.visible = false
+	if _howto_panel != null: _howto_panel.visible = false
 	_sync_fullscreen_label()
-	if _play_btn != null and is_inside_tree():
-		_play_btn.grab_focus()
-
-
+	if _play_btn != null and is_inside_tree(): _play_btn.grab_focus()
 func _on_quit_pressed() -> void:
-	if is_inside_tree():
-		get_tree().quit()
+	if is_inside_tree(): get_tree().quit()

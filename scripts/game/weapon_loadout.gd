@@ -10,6 +10,7 @@ var _upgrades: UpgradeSystemRef
 var _slots: Dictionary = {}
 var _selected_slot: int = 1
 var _rng := RandomNumberGenerator.new()
+var _archetype: Dictionary = {}
 
 
 func _init(balance_db: BalanceDBRef = null, upgrade_sys: UpgradeSystemRef = null) -> void:
@@ -45,12 +46,16 @@ func setup(balance_db: BalanceDBRef, upgrade_sys: UpgradeSystemRef) -> void:
 		}
 
 
-func get_selected_slot() -> int:
-	return _selected_slot
-
-
-func get_selected_def() -> Dictionary:
-	return (_slots.get(_selected_slot, {}) as Dictionary).get("def", {})
+func set_archetype(arch: Dictionary) -> void:
+	_archetype = arch
+	for s in _slots.keys():
+		var st: Dictionary = _slots[s]; var def: Dictionary = st["def"]
+		st["mag"] = _effective_mag_size(def)
+		st["reserve"] = mini(_effective_reserve_max(def), roundi(float(def.get("reserve_start", 0)) * _arch_f("ammo_capacity_mult", 1.0)))
+		st["battery"] = _effective_battery_max(def)
+func _arch_f(key: String, def_v: float) -> float: return float(_archetype.get(key, def_v))
+func get_selected_slot() -> int: return _selected_slot
+func get_selected_def() -> Dictionary: return (_slots.get(_selected_slot, {}) as Dictionary).get("def", {})
 
 
 func select_slot(slot: int) -> bool:
@@ -135,11 +140,11 @@ func try_fire(is_aiming: bool = false) -> Dictionary:
 		st["combo_step"] = (idx + 1) % combo_arr.size()
 		st["combo_reset_left"] = 1.15
 
-	var dmg_mult := _stat("damage_multiplier", 1.0)
+	var dmg_mult := _stat("damage_multiplier", 1.0) * _arch_f("damage_mult", 1.0)
 	var base_dmg := float(def.get("damage", 10.0)) * combo_mult * dmg_mult
-	var crit_chance := clampf(float(def.get("crit_chance", 0.05)) + _stat("crit_chance_bonus", 0.0), 0.0, 0.95)
+	var crit_chance := clampf(float(def.get("crit_chance", 0.05)) + _stat("crit_chance_bonus", 0.0) + _arch_f("crit_chance_bonus", 0.0), 0.0, 0.95)
 	var is_crit := _rng.randf() < crit_chance
-	var crit_mult := float(def.get("crit_multiplier", 1.5))
+	var crit_mult := float(def.get("crit_multiplier", 1.5)) * _arch_f("crit_damage_mult", 1.0)
 	var melee_mult := _stat("melee_range_multiplier", 1.0) if str(def.get("category", "")) == "melee" else 1.0
 	var blast_mult := _stat("blast_radius_multiplier", 1.0)
 	var pierce_bonus := int(round(_stat("laser_pierce_bonus", 0.0)))
@@ -190,7 +195,7 @@ func start_reload_or_vent() -> bool:
 		var max_mag := _effective_mag_size(def)
 		if bool(st["is_reloading"]) or int(st["mag"]) >= max_mag or int(st["reserve"]) <= 0:
 			return false
-		var reload_s := float(def.get("reload_time_s", 1.2)) / maxf(0.25, _stat("reload_speed_multiplier", 1.0))
+		var reload_s := (float(def.get("reload_time_s", 1.2)) * _arch_f("reload_time_mult", 1.0)) / maxf(0.25, _stat("reload_speed_multiplier", 1.0))
 		st["is_reloading"] = true
 		st["reload_total"] = reload_s
 		st["reload_left"] = reload_s
@@ -278,16 +283,10 @@ func _finish_reload(st: Dictionary) -> void:
 
 
 func _effective_mag_size(def: Dictionary) -> int:
-	return maxi(1, roundi(float(def.get("mag_size", 1)) * _stat("ammo_capacity_multiplier", 1.0)))
-
-
+	return maxi(1, roundi(float(def.get("mag_size", 1)) * _stat("ammo_capacity_multiplier", 1.0) * _arch_f("ammo_capacity_mult", 1.0)))
 func _effective_reserve_max(def: Dictionary) -> int:
-	return maxi(0, roundi(float(def.get("reserve_max", 0)) * _stat("ammo_capacity_multiplier", 1.0)))
-
-
+	return maxi(0, roundi(float(def.get("reserve_max", 0)) * _stat("ammo_capacity_multiplier", 1.0) * _arch_f("ammo_capacity_mult", 1.0)))
 func _effective_battery_max(def: Dictionary) -> float:
-	return float(def.get("battery_max", 100.0)) * _stat("ammo_capacity_multiplier", 1.0)
-
-
+	return float(def.get("battery_max", 100.0)) * _stat("ammo_capacity_multiplier", 1.0) * _arch_f("ammo_capacity_mult", 1.0)
 func _stat(key: String, fallback: float) -> float:
 	return _upgrades.get_stat(key) if _upgrades != null else fallback

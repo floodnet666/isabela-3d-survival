@@ -1,5 +1,31 @@
 # CHANGELOG — Projeto Isabela 3D
 
+## [2026-11-17 01:19] Rig + Animação de Corrida do 1º Boss & Texturas/Normais Estilo Alien (Wan2GP)
+- **Backups criados**: `.backups/alien_textures_20261117/` e `.backups/` para `SK_Boss_Reaper.glb`.
+- **Rig & Animação de Membros do 1º Boss ([SK_Boss_Reaper.glb](file:///c:/Users/sphok/isabela-3d-survival/assets/SK_Boss_Reaper/SK_Boss_Reaper.glb))**:
+  - Malha otimizada e rigada no Blender 5.3 com `ReaperArmature` (`Skeleton3D` de `15` ossos) e animações `Run`, `Idle` e `Attack` exportadas em glTF `+Y Up`.
+  - Integradas em [`scripts/game/boss_visuals_helper.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/boss_visuals_helper.gd) (`238` linhas) e [`scripts/game/boss_sentinel.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/boss_sentinel.gd) (`236` linhas): animação `Run` escalada pela velocidade no estado `CHASE`, `Attack` no `WINDUP`/impacto e `Idle` em repouso.
+- **Texturas & Micro-Normais estilo *Alien* (Ridley Scott) via Wan2GP (`qwen_image_21_7B`, `denoising_strength=0.44`)**:
+  - Aprimorados mapas `BaseColor` + relevo micro-normal Sobel RNM (`*_Normal.png`) para **Mapa** (`ENV_DesertCoast`), **Inimigos** (`SK_Droid_Small`, `SK_Droid_Tall`), **Armas** (`Pistol`, `Shotgun`, `RocketLauncher`, `Katana`, `LaserGun`, `Lightsaber`) e **Personagem** (`SK_Isabela` / `Leeloo`, sem alterar `SK_Isabela.glb`).
+  - Reimportação no Godot concluída com `186/187` `.import` em `compress/mode=2` (apenas `main_menu_bg.png.import` em `mode=0`), **`15/15` suítes headless aprovadas** e **`45/45` scripts `< 300` linhas**.
+
+## [2026-11-16 23:36] Integração do Modelo 3D do Primeiro Boss (`SK_Boss_Reaper.glb`)
+- **Asset integrado**: copiado `2026-11-16-23h08m46s_seed3150903_Bronze lion statue.glb` (gerado via TRELLIS.2 no Wan2GP) para [`assets/SK_Boss_Reaper/SK_Boss_Reaper.glb`](file:///c:/Users/sphok/isabela-3d-survival/assets/SK_Boss_Reaper/SK_Boss_Reaper.glb) e importado no Godot.
+- **Auto-escala e aterramento (`y = 0`)** em [`scripts/game/boss_visuals_helper.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/boss_visuals_helper.gd): normaliza o AABB do `.glb` (`~1.0 m` centrado na origem) para `height_m = 2.45 m`, apoia os pés em `y = 0.0` e alinha a frente para `-Z`.
+- **Ordem dos Bosses** em [`data/game_balance.json`](file:///c:/Users/sphok/isabela-3d-survival/data/game_balance.json): `white_reaper` definido como o **1º Boss (Onda 5)** em `rotation_order`, com proteção em [`scripts/game/player_skin_helper.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/player_skin_helper.gd) para preservar o esqueleto/armas caso o `.glb` ainda esteja sem rig (`Skeleton3D`).
+
+## [2026-11-16 15:57] Implementação da Trilha 3 (Bosses Rotativos, Skins & Arquétipos, Mini-Radar)
+- **Backups criados**: `.backups\trilha3_20261116\*`.
+- **Pilar 3.1 — Bosses Rotativos & Chuva de Cápsulas**:
+  - Adicionados [`scripts/game/boss_sentinel.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/boss_sentinel.gd), [`scripts/game/boss_visuals_helper.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/boss_visuals_helper.gd), [`scenes/game/boss_sentinel.tscn`](file:///c:/Users/sphok/isabela-3d-survival/scenes/game/boss_sentinel.tscn), [`scripts/game/orbital_drop_pod.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/orbital_drop_pod.gd) e [`scripts/game/hud_boss_bar.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/hud_boss_bar.gd).
+  - Configurados os 3 Bosses rotativos a cada 5 ondas (`valkyrie_skull` Onda 5, `white_reaper` Onda 10, `anubis_phantom` Onda 15) em [`data/game_balance.json`](file:///c:/Users/sphok/isabela-3d-survival/data/game_balance.json) e [`scripts/game/balance_db.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/balance_db.gd), com Enrage aos 50% HP (`+25%` velocidade + salva de 4 cápsulas), cápsulas destrutíveis, carta `legendary` garantida em [`scripts/game/upgrade_system.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/upgrade_system.gd) e drop imediato de Vida + Munição.
+- **Pilar 3.2 — Skins Jogáveis, Capacetes & Arquétipos (Buff + Debuff)**:
+  - Adicionados [`scripts/game/player_skin_helper.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/player_skin_helper.gd) e [`scripts/game/skin_selector_modal_ui.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/skin_selector_modal_ui.gd), integrados em [`scripts/game/settings_manager.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/settings_manager.gd) (`user://unlocks.cfg` + `unlock_all_for_test`), [`scripts/game/main_menu_controller.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/main_menu_controller.gd), [`scripts/game/player_controller.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/player_controller.gd) e [`scripts/game/weapon_loadout.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/weapon_loadout.gd), preservando o pool `O(1)` de 7 armas.
+- **Pilar 3.3 — Mini-Radar Tático no HUD**:
+  - Adicionado [`scripts/game/hud_radar.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/hud_radar.gd) via `_draw()` com throttle de `0.06 s` e projeção relativa ao `yaw` do jogador, integrado em [`scripts/game/hud_controller.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/hud_controller.gd).
+- **Testes**:
+  - Adicionada suíte [`tests/test_trilha_3_boss_skins_radar.gd`](file:///c:/Users/sphok/isabela-3d-survival/tests/test_trilha_3_boss_skins_radar.gd); validada regra `< 300` linhas (`MAX_LINES=299`, `VIOLATIONS=0`).
+
 ## [2026-11-16 15:07] Ficha Completa de Comportamento & Ataques dos 3 Bosses (`TRILHA_3_BOSSES_DESIGN.md`)
 - **Backups criados**: `D:\Godot\isabela_scene_test\.backups\TRILHA_3_PLAN.md.20261116_150706.bak`, `CHANGELOG.md.20261116_150706.bak`.
 - **Criado [`docs/TRILHA_3_BOSSES_DESIGN.md`](file:///D:/Godot/isabela_scene_test/docs/TRILHA_3_BOSSES_DESIGN.md)**: ficha estruturada em 4 seções (*Identidade & Leitura Visual*, *Comportamento & Fluxo de IA*, *Movimentos & Kit de Ataques com Telegrafia* e *Skin Jogável*) para os 3 Bosses rotativos (`Valkyrie Skull`, `White Reaper`, `Anubis Phantom`).

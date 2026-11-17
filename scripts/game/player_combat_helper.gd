@@ -65,8 +65,8 @@ static func process_combat(player: CharacterBody3D, delta: float, loadout: Weapo
 	return res
 
 
-static func compute_move_speed(cfg: Dictionary, upgrades: UpgradeSystem, loadout: WeaponLoadout, sprinting: bool, aiming: bool, world_y: float) -> float:
-	var base := float(cfg.get("sprint_speed_mps", 8.6) if sprinting and not aiming else cfg.get("walk_speed_mps", 5.8))
+static func compute_move_speed(cfg: Dictionary, upgrades: UpgradeSystem, loadout: WeaponLoadout, sprinting: bool, aiming: bool, world_y: float, arch_speed_mult: float = 1.0) -> float:
+	var base := float(cfg.get("sprint_speed_mps", 8.6) if sprinting and not aiming else cfg.get("walk_speed_mps", 5.8)) * arch_speed_mult
 	if aiming:
 		base *= float(cfg.get("aim_speed_multiplier", 0.85))
 	if upgrades != null:

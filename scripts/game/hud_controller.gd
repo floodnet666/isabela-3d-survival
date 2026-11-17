@@ -33,6 +33,8 @@ var _upgrade_modal: UpgradeModalRef
 var _pause_modal: PauseModalRef
 var _game_over_modal: GameOverModalRef
 var _settings_modal: SettingsModalRef
+var _radar: Control
+var _boss_bar: Control
 var _vig_left: float = 0.0
 var _banner_left: float = 0.0
 var _built: bool = false
@@ -63,7 +65,11 @@ func bind(gm: GameManagerRef, player: PlayerControllerRef) -> void:
 		_connect_once(_player.view_mode_changed, _on_view_mode_changed)
 	if _crosshair != null and _player.has_method("is_fps_mode"):
 		_crosshair.set_view_mode(_player.is_fps_mode(), false)
+	if _radar != null: _radar.call("bind", _player, _player.get_node_or_null("CameraPivot"))
 	_refresh_weapon_bar()
+
+func bind_boss(boss: Node, wave: int, dname: String) -> void:
+	if _boss_bar != null: _boss_bar.call("bind_boss", boss, wave, dname)
 
 
 func _connect_once(sig: Signal, cb: Callable) -> void:
@@ -178,7 +184,8 @@ func _ensure_ui() -> void:
 	_upgrade_modal = UpgradeModalRef.new()
 	_upgrade_modal.card_selected.connect(select_upgrade_card)
 	add_child(_upgrade_modal)
-
+	_radar = preload("res://scripts/game/hud_radar.gd").new(); add_child(_radar)
+	_boss_bar = preload("res://scripts/game/hud_boss_bar.gd").new(); add_child(_boss_bar)
 	_build_modals()
 
 
@@ -234,30 +241,23 @@ func _on_xp_changed(xp: int, next_xp: int, lvl: int) -> void:
 	_xp_bar.max_value = maxf(1.0, float(next_xp))
 	_xp_bar.value = float(xp)
 	_xp_lbl.text = "NÍVEL %d  •  %d / %d XP" % [lvl, xp, next_xp]
-
 func _on_score_changed(sc: int, kl: int) -> void:
 	_score_lbl.text = "ABATES: %d  •  PONTOS: %d" % [kl, sc]
-
 func _on_hp_changed(cur: float, mx: float) -> void:
 	_hp_bar.max_value = maxf(1.0, mx)
 	_hp_bar.value = cur
 	_hp_lbl.text = "HP %d / %d" % [roundi(cur), roundi(mx)]
-
 func _on_player_damaged(_amt: float, _kb: Vector3) -> void:
 	_vig_left = 0.28
-
 func _on_dash_changed(chg: int, mx: int, prog: float) -> void:
 	_dash_lbl.text = "DASH [Q]: %d/%d" % [chg, mx]
 	_dash_bar.value = prog
-
 func _on_hit_confirmed(is_crit: bool, _is_kill: bool) -> void:
 	if _crosshair != null:
 		_crosshair.trigger_hitmarker(is_crit)
-
 func _on_view_mode_changed(is_fps: bool, doom_centered: bool) -> void:
 	if _crosshair != null:
 		_crosshair.set_view_mode(is_fps, doom_centered)
-
 func _on_upgrade_modal_opened(choices: Array) -> void:
 	_upgrade_modal.show_choices(choices)
 

@@ -23,6 +23,7 @@ var _db: BalanceDBRef
 var _upgrades: UpgradeSystemRef
 var _loadout: WeaponLoadoutRef
 var _cfg: Dictionary = {}
+var _archetype: Dictionary = {}
 
 var max_hp: float = 120.0
 var current_hp: float = 120.0
@@ -72,7 +73,10 @@ func configure(balance_db: BalanceDBRef, upgrades: UpgradeSystemRef, loadout: We
 	_upgrades = upgrades
 	_loadout = loadout
 	_cfg = _db.get_player_cfg()
-	max_hp = float(_cfg.get("base_max_hp", 120.0)) + _upgrades.get_stat("max_hp_bonus")
+	var sm := preload("res://scripts/game/settings_manager.gd")
+	_archetype = preload("res://scripts/game/player_skin_helper.gd").apply_skin_and_helmet(self, sm.get_selected_skin(), str(sm.get_val("selected_helmet")), _db, _animator, _weapon_mgr)
+	if _loadout != null and _loadout.has_method("set_archetype"): _loadout.call("set_archetype", _archetype)
+	max_hp = float(_cfg.get("base_max_hp", 120.0)) * float(_archetype.get("max_hp_mult", 1.0)) + _upgrades.get_stat("max_hp_bonus")
 	current_hp = max_hp
 	_dash_charges = get_max_dash_charges()
 	is_dead = false
@@ -112,11 +116,12 @@ func get_max_dash_charges() -> int:
 
 
 func get_effective_dash_cooldown() -> float:
-	return _upgrades.get_effective_dash_cooldown(float(_cfg.get("dash_cooldown_s", 1.60)), float(_cfg.get("dash_min_cooldown_s", 0.45))) if _upgrades != null else float(_cfg.get("dash_cooldown_s", 1.60))
+	var cd := float(_cfg.get("dash_cooldown_s", 1.60)) * float(_archetype.get("dash_cooldown_mult", 1.0))
+	return _upgrades.get_effective_dash_cooldown(cd, float(_cfg.get("dash_min_cooldown_s", 0.45))) if _upgrades != null else cd
 
 
 func compute_move_speed(sprinting: bool, aiming: bool, world_y: float) -> float:
-	return PlayerCombatRef.compute_move_speed(_cfg, _upgrades, _loadout, sprinting, aiming, world_y)
+	return PlayerCombatRef.compute_move_speed(_cfg, _upgrades, _loadout, sprinting, aiming, world_y, float(_archetype.get("move_speed_mult", 1.0)))
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -214,7 +219,7 @@ func apply_pickup(pickup_id: String, cfg: Dictionary) -> void:
 func apply_upgrade_result(res: Dictionary) -> void:
 	if _upgrades == null:
 		return
-	max_hp = float(_cfg.get("base_max_hp", 120.0)) + _upgrades.get_stat("max_hp_bonus")
+	max_hp = float(_cfg.get("base_max_hp", 120.0)) * float(_archetype.get("max_hp_mult", 1.0)) + _upgrades.get_stat("max_hp_bonus")
 	var h := float(res.get("heal_amount", 0.0))
 	if h > 0.0:
 		heal(h)

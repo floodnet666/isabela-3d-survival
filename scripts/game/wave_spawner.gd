@@ -4,9 +4,13 @@ extends Node3D
 
 const BalanceDBRef := preload("res://scripts/game/balance_db.gd")
 const PickupCrateRef := preload("res://scripts/game/pickup_crate.gd")
+const BossSentinelScene := preload("res://scenes/game/boss_sentinel.tscn")
+const OrbitalDropPodRef := preload("res://scripts/game/orbital_drop_pod.gd")
 
 signal enemy_spawned(enemy: Node3D)
+signal boss_spawned(boss: Node3D, wave: int, display_name: String)
 signal crate_spawned(crate: Node3D)
+signal pod_destroyed_bonus(xp: int)
 
 @export var droid_small_scene: PackedScene
 @export var droid_tall_scene: PackedScene
@@ -75,6 +79,8 @@ func queue_wave(wave_spec: Dictionary) -> void:
 		var tmp := _queue[idx]
 		_queue[idx] = _queue[swap_idx]
 		_queue[swap_idx] = tmp
+	if bool(wave_spec.get("is_boss_wave", false)):
+		_queue.push_front("boss:" + str(wave_spec.get("boss_id", "valkyrie_skull")))
 	_spawn_interval = float(wave_spec.get("spawn_interval_s", 1.0))
 	_max_concurrent = int(wave_spec.get("max_concurrent", 12))
 	_spawn_timer = 0.25
@@ -157,6 +163,9 @@ func maybe_drop_crate_at(world_pos: Vector3, drop_chance: float, hp_ratio: float
 
 
 func _spawn_enemy(enemy_id: String) -> void:
+	if enemy_id.begins_with("boss:"):
+		_spawn_boss(enemy_id.substr(5))
+		return
 	var scene: PackedScene = droid_small_scene
 	if enemy_id == "droid_tall":
 		scene = droid_tall_scene
@@ -230,6 +239,52 @@ func _is_spot_clear(pos: Vector3, margin_m: float) -> bool:
 	if _arena_props != null and _arena_props.has_method("is_position_clear"):
 		return bool(_arena_props.call("is_position_clear", pos, margin_m))
 	return true
+
+
+func _spawn_boss(boss_id: String) -> void:
+	if _entities_root == null or BossSentinelScene == null:
+		return
+	var p_pos := _player.global_position if _player != null else Vector3.ZERO
+	var spawn_pos := pick_ring_spawn_position(p_pos)
+	var boss := BossSentinelScene.instantiate() as Node3D
+	boss.position = _entities_root.to_local(spawn_pos) if _entities_root.is_inside_tree() else spawn_pos
+	_entities_root.add_child(boss)
+	if boss.is_inside_tree():
+		boss.global_position = spawn_pos
+	if boss.has_method("configure_from_balance"):
+		boss.call("configure_from_balance", boss_id, _db, _current_wave_spec, _player)
+	_active_enemies.append(boss)
+	_spawn_drop_beam_fx(spawn_pos)
+	enemy_spawned.emit(boss)
+	var w := int(_current_wave_spec.get("wave", 5))
+	var dname := str(boss.get("display_name")) if "display_name" in boss else boss_id
+	boss_spawned.emit(boss, w, dname)
+
+
+func spawn_capsule_rain(count: int, wave: int) -> void:
+	if _db != null and _entities_root != null:
+		OrbitalDropPodRef.spawn_rain(self, _entities_root, _player, wave, count, _db.get_drop_pod_cfg())
+
+
+func _spawn_reinforcement_at(enemy_id: String, world_pos: Vector3) -> void:
+	var scene: PackedScene = droid_spider_scene if enemy_id == "droid_spider" else droid_small_scene
+	if scene == null or _entities_root == null:
+		return
+	var e := scene.instantiate() as Node3D
+	_entities_root.add_child(e)
+	if e.is_inside_tree():
+		e.global_position = world_pos
+	if e.has_method("configure_from_balance"):
+		e.call("configure_from_balance", enemy_id, _db, _current_wave_spec, _player)
+	_active_enemies.append(e)
+	enemy_spawned.emit(e)
+
+
+func spawn_boss_reward_crates(world_pos: Vector3) -> void:
+	if _db == null or _entities_root == null:
+		return
+	_instantiate_crate("health_crate", Vector3(world_pos.x - 1.1, 0.0, world_pos.z))
+	_instantiate_crate("ammo_crate", Vector3(world_pos.x + 1.1, 0.0, world_pos.z))
 
 
 func _prune_dead(arr: Array[Node3D]) -> void:

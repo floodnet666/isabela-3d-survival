@@ -56,7 +56,7 @@ func get_effective_dash_cooldown(base_cd: float, min_cd: float) -> float:
 	return maxf(min_cd, base_cd * (1.0 - red))
 
 
-func roll_choices(wave: int, rng: RandomNumberGenerator = null) -> Array[Dictionary]:
+func roll_choices(wave: int, rng: RandomNumberGenerator = null, min_rarity: String = "") -> Array[Dictionary]:
 	if _db == null or not _db.is_loaded():
 		push_error("UpgradeSystem: BalanceDB not loaded")
 		return []
@@ -85,9 +85,18 @@ func roll_choices(wave: int, rng: RandomNumberGenerator = null) -> Array[Diction
 	var count := mini(desired, pool.size())
 	for idx in range(count):
 		var def := pool[idx]
-		var rarity := _roll_rarity(wave, generator)
+		var rarity := _find_rarity(min_rarity) if (not min_rarity.is_empty() and idx == 0) else _roll_rarity(wave, generator)
+		if min_rarity == "legendary":
+			rarity = _find_rarity("legendary")
 		result.append(_build_card(def, rarity))
 	return result
+
+
+func _find_rarity(rarity_id: String) -> Dictionary:
+	for r in _db.get_progression_cfg().get("rarities", []):
+		if r is Dictionary and str((r as Dictionary).get("id", "")) == rarity_id:
+			return r as Dictionary
+	return {"id": "legendary", "label": "Lendário", "color_hex": "#FBBF24", "multiplier": 3.0}
 
 
 func apply_upgrade(card: Dictionary) -> Dictionary:

@@ -120,6 +120,10 @@ func _bind_scene_nodes() -> void:
 		wave_spawner.enemy_spawned.connect(_on_enemy_spawned)
 	if not wave_spawner.crate_spawned.is_connected(_on_crate_spawned):
 		wave_spawner.crate_spawned.connect(_on_crate_spawned)
+	if wave_spawner.has_signal("boss_spawned") and not wave_spawner.is_connected("boss_spawned", _on_boss_spawned):
+		wave_spawner.connect("boss_spawned", _on_boss_spawned)
+	if wave_spawner.has_signal("pod_destroyed_bonus") and not wave_spawner.is_connected("pod_destroyed_bonus", game_manager.add_xp):
+		wave_spawner.connect("pod_destroyed_bonus", game_manager.add_xp)
 	if not hud.restart_requested.is_connected(_on_restart):
 		hud.restart_requested.connect(_on_restart)
 	if hud.has_signal("menu_requested") and not hud.is_connected("menu_requested", _on_return_to_menu):
@@ -198,6 +202,10 @@ func _on_upgrade_modal_opened(_c: Array) -> void:
 
 func _on_barrel_exploded(_p: Vector3, _r: float) -> void:
 	if _audio != null: _audio.play_sfx("barrel_explode", 0.08, -1.0)
+
+
+func _on_boss_spawned(boss: Node3D, wave: int, dname: String) -> void:
+	preload("res://scripts/game/boss_visuals_helper.gd").bind_boss_to_arena(boss, wave, dname, wave_spawner, game_manager, hud)
 
 
 func _on_crate_spawned(crate: Node3D) -> void:

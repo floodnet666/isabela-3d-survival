@@ -89,6 +89,50 @@ func get_enemy_cfg(id: String) -> Dictionary:
 	return enemies.get(id, {})
 
 
+func get_bosses_cfg() -> Dictionary:
+	return _data.get("bosses", {})
+
+
+func get_drop_pod_cfg() -> Dictionary:
+	return get_bosses_cfg().get("drop_pod", {})
+
+
+func get_boss_id_for_wave(wave: int) -> String:
+	var bosses := get_bosses_cfg()
+	var interval := maxi(1, int(bosses.get("wave_interval", 5)))
+	if wave <= 0 or wave % interval != 0:
+		return ""
+	var order: Array = bosses.get("rotation_order", ["valkyrie_skull", "white_reaper", "anubis_phantom"])
+	if order.is_empty():
+		return ""
+	var tier := maxi(1, int(wave / interval))
+	return str(order[(tier - 1) % order.size()])
+
+
+func get_boss_cfg(boss_id: String, tier: int = 1) -> Dictionary:
+	var types: Dictionary = get_bosses_cfg().get("types", {})
+	var base: Dictionary = (types.get(boss_id, {}) as Dictionary).duplicate(true)
+	if base.is_empty():
+		return {}
+	var t := maxi(1, tier)
+	base["tier"] = t
+	base["resolved_hp"] = float(base.get("base_hp", 950.0)) + float(base.get("hp_per_tier", 450.0)) * float(t - 1)
+	base["resolved_xp"] = int(base.get("xp_base", 450)) + (t - 1) * 150
+	base["resolved_score"] = int(base.get("score_value", 2500)) + (t - 1) * 1000
+	return base
+
+
+func get_character_archetypes() -> Dictionary:
+	return _data.get("character_archetypes", {})
+
+
+func get_archetype_cfg(skin_id: String) -> Dictionary:
+	var all_arch := get_character_archetypes()
+	if all_arch.has(skin_id):
+		return all_arch[skin_id] as Dictionary
+	return all_arch.get("leeloo", {}) as Dictionary
+
+
 func get_progression_cfg() -> Dictionary:
 	return _data.get("progression", {})
 
@@ -149,9 +193,16 @@ func get_wave_spec(wave: int) -> Dictionary:
 	)
 	var max_concurrent := mini(int(get_arena_cfg().get("max_concurrent_enemies_cap", 20)), 8 + w * 2)
 	var clear_xp := int(cfg.get("wave_clear_xp_bonus_base", 25)) + int(cfg.get("wave_clear_xp_bonus_per_wave", 10)) * (w - 1)
+	var boss_id := get_boss_id_for_wave(w)
+	var is_boss := not boss_id.is_empty()
+	if is_boss and small_count > 0:
+		small_count -= 1
 
 	return {
 		"wave": w,
+		"is_boss_wave": is_boss,
+		"boss_id": boss_id,
+		"boss_tier": maxi(1, int(w / maxi(1, int(get_bosses_cfg().get("wave_interval", 5))))) if is_boss else 0,
 		"total_enemies": total,
 		"small_count": small_count,
 		"tall_count": tall_count,

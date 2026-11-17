@@ -3,6 +3,8 @@ extends RefCounted
 ## Persistent user settings (Audio, Video, Controls) stored in user://settings.cfg.
 
 const DEFAULT_CFG_PATH := "user://settings.cfg"
+const DEFAULT_UNLOCKS_PATH := "user://unlocks.cfg"
+const DEFAULT_UNLOCKED_SKINS := ["leeloo", "isabela_jacket", "isabela_top", "isabela_lingerie"]
 
 const DEFAULTS := {
 	"master_volume": 0.85,
@@ -15,11 +17,17 @@ const DEFAULTS := {
 	"mouse_sensitivity": 0.0022,
 	"controller_sensitivity": 3.4,
 	"default_fps_mode": false,
+	"selected_skin": "leeloo",
+	"selected_helmet": "none",
+	"unlock_all_for_test": false,
 }
 
 static var _cache: Dictionary = {}
 static var _loaded: bool = false
 static var _custom_path: String = ""
+static var _unlocks_cache: Dictionary = {}
+static var _unlocks_loaded: bool = false
+static var _unlocks_custom_path: String = ""
 
 
 static func set_config_path_for_test(path: String) -> void:
@@ -152,5 +160,71 @@ static func _section_for(key: String) -> String:
 			return "audio"
 		"fullscreen", "vsync", "fov", "graphics_quality":
 			return "video"
+		"selected_skin", "selected_helmet", "unlock_all_for_test":
+			return "customization"
 		_:
 			return "controls"
+
+
+static func set_unlocks_path_for_test(path: String) -> void:
+	_unlocks_custom_path = path
+	_unlocks_loaded = false
+	_unlocks_cache.clear()
+
+
+static func _get_unlocks_path() -> String:
+	return _unlocks_custom_path if not _unlocks_custom_path.is_empty() else DEFAULT_UNLOCKS_PATH
+
+
+static func _ensure_unlocks_loaded() -> void:
+	if _unlocks_loaded:
+		return
+	_unlocks_cache.clear()
+	for s in DEFAULT_UNLOCKED_SKINS:
+		_unlocks_cache[s] = true
+	var cfg := ConfigFile.new()
+	if cfg.load(_get_unlocks_path()) == OK and cfg.has_section("skins"):
+		for k in cfg.get_section_keys("skins"):
+			if bool(cfg.get_value("skins", k, false)):
+				_unlocks_cache[str(k)] = true
+	_unlocks_loaded = true
+
+
+static func is_skin_unlocked(skin_id: String) -> bool:
+	ensure_loaded()
+	if bool(get_val("unlock_all_for_test")):
+		return true
+	_ensure_unlocks_loaded()
+	return bool(_unlocks_cache.get(skin_id, false))
+
+
+static func unlock_skin(skin_id: String) -> void:
+	if skin_id.is_empty():
+		return
+	_ensure_unlocks_loaded()
+	_unlocks_cache[skin_id] = true
+	var cfg := ConfigFile.new()
+	for k in _unlocks_cache.keys():
+		cfg.set_value("skins", str(k), bool(_unlocks_cache[k]))
+	cfg.save(_get_unlocks_path())
+
+
+static func select_skin(skin_id: String) -> bool:
+	if not is_skin_unlocked(skin_id):
+		return false
+	set_val("selected_skin", skin_id, true)
+	return true
+
+
+static func get_selected_skin() -> String:
+	var sid := str(get_val("selected_skin"))
+	return sid if is_skin_unlocked(sid) else "leeloo"
+
+
+static func get_unlocked_skins() -> Array[String]:
+	_ensure_unlocks_loaded()
+	var res: Array[String] = []
+	for k in _unlocks_cache.keys():
+		if bool(_unlocks_cache[k]):
+			res.append(str(k))
+	return res

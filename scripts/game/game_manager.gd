@@ -41,6 +41,7 @@ var _rng := RandomNumberGenerator.new()
 var _inter_wave_timer_s: float = 0.0
 var _waiting_next_wave: bool = false
 var _manage_scene_pause: bool = true
+var _pending_legendary_drafts: int = 0
 
 
 func initialize(balance_path: String = "res://data/game_balance.json", rng_seed: int = 0) -> bool:
@@ -81,6 +82,7 @@ func start_run(manage_scene_pause: bool = true) -> void:
 	damage_dealt_by_weapon.clear()
 	kills_by_type.clear()
 	pending_upgrade_drafts = 0
+	_pending_legendary_drafts = 0
 	current_choices.clear()
 	_waiting_next_wave = false
 	_set_state(State.PLAYING)
@@ -213,8 +215,21 @@ func _begin_next_wave() -> void:
 	wave_started.emit(current_wave, spec)
 
 
+func grant_boss_legendary_draft() -> void:
+	if state == State.GAME_OVER:
+		return
+	_pending_legendary_drafts += 1
+	pending_upgrade_drafts += 1
+	if state != State.UPGRADE_MODAL:
+		_open_next_upgrade_modal()
+
+
 func _open_next_upgrade_modal() -> void:
-	current_choices = upgrades.roll_choices(maxi(1, current_wave), _rng)
+	var min_rar := ""
+	if _pending_legendary_drafts > 0:
+		_pending_legendary_drafts -= 1
+		min_rar = "legendary"
+	current_choices = upgrades.roll_choices(maxi(1, current_wave), _rng, min_rar)
 	if current_choices.is_empty():
 		pending_upgrade_drafts = 0
 		_set_state(State.PLAYING)
