@@ -14,9 +14,14 @@ signal pod_destroyed_bonus(xp: int)
 
 @export var droid_small_scene: PackedScene
 @export var droid_tall_scene: PackedScene
-@export var droid_spider_scene: PackedScene = preload("res://scenes/game/droid_spider.tscn")
-@export var droid_sawbox_scene: PackedScene = preload("res://scenes/game/droid_sawbox.tscn")
 @export var crate_scene: PackedScene
+
+const MECH_SCENES := {
+	"mech_leela": preload("res://scenes/game/mech_leela.tscn"),
+	"mech_mike": preload("res://scenes/game/mech_mike.tscn"),
+	"mech_stan": preload("res://scenes/game/mech_stan.tscn"),
+	"mech_george": preload("res://scenes/game/mech_george.tscn"),
+}
 
 var _db: BalanceDBRef
 var _entities_root: Node3D
@@ -64,16 +69,14 @@ func queue_wave(wave_spec: Dictionary) -> void:
 	_queue.clear()
 	var small_n := int(wave_spec.get("small_count", 0))
 	var tall_n := int(wave_spec.get("tall_count", 0))
-	var spider_n := int(wave_spec.get("spider_count", 0))
-	var sawbox_n := int(wave_spec.get("sawbox_count", 0))
 	for _i in range(small_n):
 		_queue.append("droid_small")
 	for _j in range(tall_n):
 		_queue.append("droid_tall")
-	for _k in range(spider_n):
-		_queue.append("droid_spider")
-	for _m in range(sawbox_n):
-		_queue.append("droid_sawbox")
+	var mech_counts: Dictionary = wave_spec.get("mech_counts", {})
+	for mech_id in mech_counts.keys():
+		for _m in range(int(mech_counts[mech_id])):
+			_queue.append(str(mech_id))
 	for idx in range(_queue.size() - 1, 0, -1):
 		var swap_idx := _rng.randi_range(0, idx)
 		var tmp := _queue[idx]
@@ -141,14 +144,14 @@ func pick_ring_spawn_position(player_pos: Vector3) -> Vector3:
 func choose_crate_type(hp_ratio: float, avg_ammo_ratio: float) -> String:
 	var w_health := float(_db.get_pickup("health_crate").get("drop_weight_base", 0.45))
 	var w_ammo := float(_db.get_pickup("ammo_crate").get("drop_weight_base", 0.55))
-	if hp_ratio < 0.40:
-		w_health *= 3.2
-	elif hp_ratio > 0.90:
-		w_health *= 0.45
-	if avg_ammo_ratio < 0.35:
-		w_ammo *= 2.4
-	var total := maxf(0.001, w_health + w_ammo)
-	return "health_crate" if _rng.randf_range(0.0, total) <= w_health else "ammo_crate"
+	var w_hel := float(_db.get_pickup("helmet_a").get("drop_weight_base", 0.05)) * 2.0
+	if hp_ratio < 0.40: w_health *= 3.2; w_hel *= 0.2
+	elif hp_ratio > 0.90: w_health *= 0.45
+	if avg_ammo_ratio < 0.35: w_ammo *= 2.4
+	var roll := _rng.randf_range(0.0, maxf(0.001, w_health + w_ammo + w_hel))
+	if roll <= w_health: return "health_crate"
+	if roll <= w_health + w_ammo: return "ammo_crate"
+	return "helmet_a" if _rng.randf() < 0.5 else "helmet_b"
 
 
 func maybe_drop_crate_at(world_pos: Vector3, drop_chance: float, hp_ratio: float, avg_ammo_ratio: float) -> void:
@@ -166,13 +169,7 @@ func _spawn_enemy(enemy_id: String) -> void:
 	if enemy_id.begins_with("boss:"):
 		_spawn_boss(enemy_id.substr(5))
 		return
-	var scene: PackedScene = droid_small_scene
-	if enemy_id == "droid_tall":
-		scene = droid_tall_scene
-	elif enemy_id == "droid_spider":
-		scene = droid_spider_scene
-	elif enemy_id == "droid_sawbox":
-		scene = droid_sawbox_scene
+	var scene: PackedScene = MECH_SCENES.get(enemy_id, droid_tall_scene if enemy_id == "droid_tall" else droid_small_scene)
 	if scene == null:
 		push_error("WaveSpawner: missing PackedScene for '%s'" % enemy_id)
 		return
@@ -226,7 +223,7 @@ func _spawn_drop_beam_fx(pos: Vector3) -> void:
 
 
 func _pick_spawn_position(enemy_id: String, player_pos: Vector3) -> Vector3:
-	if (enemy_id == "droid_tall" or enemy_id == "droid_spider") and _rng.randf() < 0.25 and is_inside_tree():
+	if (enemy_id == "droid_tall" or enemy_id == "mech_leela" or enemy_id == "mech_george") and _rng.randf() < 0.25 and is_inside_tree():
 		var elev := get_tree().get_first_node_in_group("arena_elevators")
 		if elev != null and elev.has_method("get_ranged_spawn_position"):
 			var elev_pos: Vector3 = elev.call("get_ranged_spawn_position", _rng)
@@ -267,7 +264,7 @@ func spawn_capsule_rain(count: int, wave: int) -> void:
 
 
 func _spawn_reinforcement_at(enemy_id: String, world_pos: Vector3) -> void:
-	var scene: PackedScene = droid_spider_scene if enemy_id == "droid_spider" else droid_small_scene
+	var scene: PackedScene = MECH_SCENES.get(enemy_id, droid_small_scene)
 	if scene == null or _entities_root == null:
 		return
 	var e := scene.instantiate() as Node3D

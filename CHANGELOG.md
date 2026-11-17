@@ -1,5 +1,57 @@
 # CHANGELOG — Projeto Isabela 3D
 
+## [2026-11-17 15:31] Correção Real do Cabelo na Malha 3D (`SK_Isabela_Leeloo.glb` no Blender) & Atualização de `GEMINI.md`
+- **Documentação ([GEMINI.md](file:///D:/Godot/isabela_scene_test/GEMINI.md))**: atualizado mapa para `46` scripts e `19` suítes de teste, registrando Mechs animados (`5/10/15/20`), escudo de 30% nos capacetes, correções da Arma Laser, Ciclo Dia/Noite (`1 min = 2h`) e correção do cabelo da Leeloo (backup em `.backups/GEMINI.md.*.bak`).
+- **Backups criados**: `.backups/SK_Isabela_Leeloo.glb.20261117_152956.bak` e atualização de [player_skin_helper.gd](file:///D:/Godot/isabela_scene_test/scripts/game/player_skin_helper.gd).
+- **Remoção de primitivas (`player_skin_helper.gd`)**: removida `_ensure_hair_crown_fix()` (`HairCrownFill` em esfera/caixas), mantendo apenas `_set_hair_visible()` para ocultar `SK_Isabela_Hair` ao equipar `helmet_a`/`helmet_b`.
+- **Edição 3D no Blender (`assets/SK_Isabela/SK_Isabela_Leeloo.glb`)**:
+  - Recuados os vértices de `M_Isabela_Hair_Scalp` (`-11 mm`) e topo de `SK_Isabela_Body` (`z > 1.675`, `-9 mm`) que atravessavam por cima dos fios, com escurecimento de `M_Isabela_Hair_Scalp` para tom de raiz.
+  - Elevadas as mechas superiores de `M_Isabela_Hair` (`+4..8 mm`) e duplicados/rotacionados (`+18°`) os cartões reais de cabelo com UV/pesos preservados na coroa.
+
+## [2026-11-17 15:05] Topo do Cabelo (Coroa) & Ocultação sob Capacete (`player_skin_helper.gd`)
+- **Backups criados**: `.backups/player_skin_helper.gd.20261117_150348.bak` e `.backups/CHANGELOG.md.20261117_150348.bak`.
+- **Cabelo sem falha no topo ([player_skin_helper.gd](file:///D:/Godot/isabela_scene_test/scripts/game/player_skin_helper.gd#L107-L143))**: `_ensure_hair_crown_fix()` eleva a malha de cabelo em `+0.012 m` (`12 mm`, escala `1.03 x 1.02 x 1.03`) e adiciona `HairCrownFill` no osso `Head` cobrindo o couro cabeludo.
+- **Sem vazamento no capacete (`_set_hair_visible`)**: quando `helmet_a`/`helmet_b` está equipado, oculta a malha de cabelo e `HairCrownFill`; ao quebrar (`"none"`), reexibe automaticamente.
+
+## [2026-11-17 14:53] Ciclo Dia / Noite (`1 min = 2 horas` — `day_night_cycle.gd`)
+- **Backups criados**: `.backups/arena_coordinator.gd.20261117_145259.bak` e `.backups/CHANGELOG.md.20261117_145259.bak`.
+- **Novo módulo ([day_night_cycle.gd](file:///D:/Godot/isabela_scene_test/scripts/game/day_night_cycle.gd), 129 linhas)**:
+  - Avança a hora do jogo na proporção `2.0 / 60.0` horas por segundo (`1 min real = 2h no jogo`, ciclo de 24h em `12 min`).
+  - Interpola `DirectionalLight3D` (inclinação, cor, energia), `ProceduralSkyMaterial` (topo/horizonte/chão) e `Environment` (luz ambiente e neblina) nas fases `AMANHECER`, `DIA`, `ENTARDECER` e `NOITE`, exibindo relógio discreto no topo do HUD (`HH:MM • FASE`).
+- **Integração ([arena_coordinator.gd](file:///D:/Godot/isabela_scene_test/scripts/game/arena_coordinator.gd#L74-L75))**: instancia `DayNightCycle` em `_bind_scene_nodes()` preservando `299` linhas (`< 300`).
+- **Teste ([test_day_night_cycle.gd](file:///D:/Godot/isabela_scene_test/tests/test_day_night_cycle.gd))**: valida taxa `1 min = 2h`, transições `DIA` / `ENTARDECER` / `NOITE`, energia da luz noturna e wrap de `24h`.
+
+## [2026-11-17 14:50] Ajuste de Encaixe do Capacete no Osso `Head` (`player_skin_helper.gd`)
+- Ajustado offset de `SM_Helmet_A`/`SM_Helmet_B` em `BoneAttachment3D` para `position = Vector3(0.0, -0.185, 0.015)` (`scale = Vector3.ONE`) em [player_skin_helper.gd](file:///D:/Godot/isabela_scene_test/scripts/game/player_skin_helper.gd#L136-L137), encaixando o colar do capacete sobre a cabeça em vez de flutuar no topo.
+
+## [2026-11-17 14:44] Correções nos Boosters da Arma Laser (`reload_speed` e feixe perfurante)
+- **Backups criados**: `.backups/*.20261117_144353.bak` para `scripts/game/{weapon_loadout,weapon_manager}.gd` e `CHANGELOG.md`.
+- **Resfriamento do Laser (`weapon_loadout.gd:266`)**: `regen_delay_left` agora decai por `delta * cool_mult` (`reload_speed_multiplier`), reduzindo também o atraso inicial antes do resfriamento ao pegar *Mãos Ágeis*.
+- **Feixe Visual Perfurante (`weapon_manager.gd:190-192`)**: quando o raio laser perfura um inimigo e `hit.is_empty()` nos segmentos seguintes, `end_pos` é estendido até `origin + dir * max_r` em vez de parar no último alvo.
+- **Testes (`tests/test_laser_boosters.gd`)**: valida `weapon_damage`, `ammo_capacity`, `blast_pierce`, `reload_speed` e `fire_rate` na `laser_gun`.
+
+## [2026-11-17 14:34] Escudo de 30% do Life para Capacetes (`helmet_a` / `helmet_b`)
+- **Backups criados**: `.backups/*.20261117_141705.bak` para `data/game_balance.json`, `scripts/game/{player_controller,player_skin_helper,hud_controller,wave_spawner,pickup_crate}.gd` e `CHANGELOG.md`.
+- **Balanceamento & Pickups (`data/game_balance.json`, `balance_db.gd`, `wave_spawner.gd`)**:
+  - Adicionados `helmet_a` e `helmet_b` em `pickups` com `shield_max_hp_percent = 0.30` e `drop_weight_base = 0.14` (removida trava `== 2` em `balance_db.gd` para `>= 2`).
+  - `WaveSpawner.choose_crate_type()` agora sorteia `helmet_a`/`helmet_b` entre os drops da arena.
+- **Escudo & Quebra Visual (`player_controller.gd`, `player_skin_helper.gd`, `hud_controller.gd`)**:
+  - Equipar no início da partida ou coletar `helmet_a`/`helmet_b` na arena concede `shield_hp = 30%` de `max_hp` e acopla o capacete 3D via `PlayerSkinHelper.attach_helmet_on_player()`.
+  - `take_damage()` absorve dano no escudo primeiro; quando `shield_hp <= 0`, o capacete é removido da cabeça e o dano excedente atinge `current_hp`.
+  - `HUDController._on_hp_changed()` exibe `• ESCUDO X` ao lado do HP enquanto `shield_hp > 0`.
+- **Testes (`tests/test_helmet_shield.gd`)**: valida escudo de 30%, absorção, quebra visual ao zerar e reequipamento ao pegar outro capacete (`ALL_TESTS_PASSED`).
+
+## [2026-11-17 13:57] Substituição dos Droids Procedurais por 4 Mechs Animados (1 a cada 5 ondas)
+- **Backups criados**: `.backups/*.20261117_135207.bak` para `data/game_balance.json`, `scripts/game/{balance_db,wave_spawner,enemy_variants_helper,enemy_droid,orbital_drop_pod,hud_radar,droid_destruction_vfx}.gd`, `tests/{test_v3_features,test_trilha_3_boss_skins_radar}.gd` e `CHANGELOG.md`.
+- **Assets & Cenas (`.gltf` + `.tscn`)**:
+  - Adicionados `assets/SK_Mech_{Leela,Mike,Stan,George}/SK_Mech_*.gltf` (pacote Quaternius Textured glTF com `Skeleton3D`, buffers/texturas embutidos e `18–20` animações).
+  - Criadas as cenas [mech_leela.tscn](file:///D:/Godot/isabela_scene_test/scenes/game/mech_leela.tscn) (`1.65 m`), [mech_mike.tscn](file:///D:/Godot/isabela_scene_test/scenes/game/mech_mike.tscn) (`1.85 m`), [mech_stan.tscn](file:///D:/Godot/isabela_scene_test/scenes/game/mech_stan.tscn) (`2.05 m`) e [mech_george.tscn](file:///D:/Godot/isabela_scene_test/scenes/game/mech_george.tscn) (`2.15 m`).
+- **Balanceamento & Ondas (`data/game_balance.json`, `balance_db.gd`, `wave_spawner.gd`)**:
+  - Removidos `droid_spider` e `droid_sawbox` da rotação de ondas; substituídos por `mech_tiers` em intervalos de 5 ondas: **Onda 5 (`mech_leela`)**, **Onda 10 (`mech_mike`)**, **Onda 15 (`mech_stan`)**, **Onda 20 (`mech_george`)**.
+  - Atualizado `wave_spawner.gd` com `MECH_SCENES`, `orbital_drop_pod.gd` (`mech_leela` a partir da Onda 10), `hud_radar.gd` (cores dedicadas por mech), `droid_destruction_vfx.gd` (`is_tall` para `mech_*`), `enemy_droid.gd` (ranged burst em `mech_leela`/`mech_george`) e `enemy_variants_helper.gd` (`_tick_mech` dirigindo `AnimationPlayer` para `Idle`/`Run`/`Shoot`/`Punch`).
+- **Testes (`tests/test_mech_enemies_replacement.gd`, `test_v3_features.gd`, `test_trilha_3_boss_skins_radar.gd`)**:
+  - Criada suíte TDD [test_mech_enemies_replacement.gd](file:///D:/Godot/isabela_scene_test/tests/test_mech_enemies_replacement.gd) validando introdução nas Ondas 5/10/15/20, ausência de `spider`/`sawbox`, `AnimationPlayer`, `configure_from_balance()` e cápsula orbital.
+
 ## [2026-11-17 01:19] Rig + Animação de Corrida do 1º Boss & Texturas/Normais Estilo Alien (Wan2GP)
 - **Backups criados**: `.backups/alien_textures_20261117/` e `.backups/` para `SK_Boss_Reaper.glb`.
 - **Rig & Animação de Membros do 1º Boss ([SK_Boss_Reaper.glb](file:///c:/Users/sphok/isabela-3d-survival/assets/SK_Boss_Reaper/SK_Boss_Reaper.glb))**:

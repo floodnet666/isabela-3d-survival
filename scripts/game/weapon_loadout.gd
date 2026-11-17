@@ -263,7 +263,7 @@ func _tick_battery(st: Dictionary, delta: float, is_actively_firing: bool) -> vo
 	if is_actively_firing:
 		return
 	if float(st["regen_delay_left"]) > 0.0 and not bool(st["is_manual_venting"]):
-		st["regen_delay_left"] = maxf(0.0, float(st["regen_delay_left"]) - delta)
+		st["regen_delay_left"] = maxf(0.0, float(st["regen_delay_left"]) - delta * cool_mult)
 		return
 	var rate := float(def.get("manual_vent_regen_per_sec", 45.0) if bool(st["is_manual_venting"]) else def.get("energy_regen_per_sec", 22.0))
 	st["battery"] = minf(max_bat, float(st["battery"]) + rate * cool_mult * delta)

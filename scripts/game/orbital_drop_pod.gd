@@ -120,7 +120,7 @@ func _open_pod() -> void:
 	if _resolved:
 		return
 	_resolved = true
-	var reinforcement := "droid_spider" if _wave >= 10 else "droid_small"
+	var reinforcement := "mech_leela" if _wave >= 10 else "droid_small"
 	pod_opened.emit(reinforcement, _target_pos)
 	queue_free()
 

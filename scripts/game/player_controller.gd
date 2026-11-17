@@ -12,6 +12,7 @@ const WeaponManagerRef := preload("res://scripts/game/weapon_manager.gd")
 const PlayerCombatRef := preload("res://scripts/game/player_combat_helper.gd")
 
 signal hp_changed(current_hp: float, max_hp: float)
+signal shield_changed(current_shield: float, max_shield: float)
 signal damaged(amount: float, knockback: Vector3)
 signal died()
 signal dash_state_changed(charges: int, max_charges: int, cooldown_progress: float)
@@ -27,6 +28,7 @@ var _archetype: Dictionary = {}
 
 var max_hp: float = 120.0
 var current_hp: float = 120.0
+var max_shield_hp: float = 0.0; var shield_hp: float = 0.0
 var is_dead: bool = false
 var is_aiming: bool = false
 
@@ -74,10 +76,12 @@ func configure(balance_db: BalanceDBRef, upgrades: UpgradeSystemRef, loadout: We
 	_loadout = loadout
 	_cfg = _db.get_player_cfg()
 	var sm := preload("res://scripts/game/settings_manager.gd")
-	_archetype = preload("res://scripts/game/player_skin_helper.gd").apply_skin_and_helmet(self, sm.get_selected_skin(), str(sm.get_val("selected_helmet")), _db, _animator, _weapon_mgr)
+	var hel := str(sm.get_val("selected_helmet"))
+	_archetype = preload("res://scripts/game/player_skin_helper.gd").apply_skin_and_helmet(self, sm.get_selected_skin(), hel, _db, _animator, _weapon_mgr)
 	if _loadout != null and _loadout.has_method("set_archetype"): _loadout.call("set_archetype", _archetype)
 	max_hp = float(_cfg.get("base_max_hp", 120.0)) * float(_archetype.get("max_hp_mult", 1.0)) + _upgrades.get_stat("max_hp_bonus")
 	current_hp = max_hp
+	max_shield_hp = max_hp * 0.30 if (hel == "helmet_a" or hel == "helmet_b") else 0.0; shield_hp = max_shield_hp
 	_dash_charges = get_max_dash_charges()
 	is_dead = false
 	if _cam_rig != null:
@@ -186,34 +190,34 @@ func try_start_dash(move_dir: Vector3) -> bool:
 func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO) -> void:
 	if is_dead or _iframes_left > 0.0 or amount <= 0.0:
 		return
+	if shield_hp > 0.0:
+		var abs_dmg := minf(shield_hp, amount); shield_hp -= abs_dmg; amount -= abs_dmg; shield_changed.emit(shield_hp, max_shield_hp)
+		if shield_hp <= 0.0: preload("res://scripts/game/player_skin_helper.gd").attach_helmet_on_player(self, "none")
+		if amount <= 0.0: _iframes_left = float(_cfg.get("post_hit_iframes_s", 0.35)); hp_changed.emit(current_hp, max_hp); return
 	current_hp = maxf(0.0, current_hp - amount)
 	_iframes_left = float(_cfg.get("post_hit_iframes_s", 0.35))
-	if _cam_rig != null:
-		_cam_rig.add_trauma(0.45)
+	if _cam_rig != null: _cam_rig.add_trauma(0.45)
 	velocity += Vector3(knockback.x, 0.0, knockback.z) * 0.45
-	if _animator != null:
-		_animator.trigger_wince()
-	hp_changed.emit(current_hp, max_hp)
-	damaged.emit(amount, knockback)
+	if _animator != null: _animator.trigger_wince()
+	hp_changed.emit(current_hp, max_hp); damaged.emit(amount, knockback)
 	if current_hp <= 0.0:
 		is_dead = true
-		if _animator != null:
-			_animator.trigger_death()
+		if _animator != null: _animator.trigger_death()
 		died.emit()
 
 
 func heal(amount: float) -> void:
-	if is_dead or amount <= 0.0:
-		return
-	current_hp = minf(max_hp, current_hp + amount)
-	hp_changed.emit(current_hp, max_hp)
-
+	if is_dead or amount <= 0.0: return
+	current_hp = minf(max_hp, current_hp + amount); hp_changed.emit(current_hp, max_hp)
 
 func apply_pickup(pickup_id: String, cfg: Dictionary) -> void:
 	if pickup_id == "health_crate":
 		heal(float(cfg.get("heal_flat", 35.0)) + max_hp * float(cfg.get("heal_max_hp_percent", 0.10)))
 	elif pickup_id == "ammo_crate" and _loadout != null:
 		_loadout.refill_ammo_percent(float(cfg.get("reserve_refill_percent", 0.40)), float(cfg.get("laser_battery_restore_percent", 1.0)))
+	elif pickup_id == "helmet_a" or pickup_id == "helmet_b":
+		max_shield_hp = max_hp * float(cfg.get("shield_max_hp_percent", 0.30)); shield_hp = max_shield_hp
+		preload("res://scripts/game/player_skin_helper.gd").attach_helmet_on_player(self, pickup_id); shield_changed.emit(shield_hp, max_shield_hp); hp_changed.emit(current_hp, max_hp)
 
 
 func apply_upgrade_result(res: Dictionary) -> void:

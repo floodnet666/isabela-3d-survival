@@ -84,7 +84,7 @@ static func spawn_droid_explosion(scene_root: Node, world_pos: Vector3, enemy_id
 	if scene_root == null or not scene_root.is_inside_tree():
 		return
 	_ensure_shared_cache()
-	var is_tall := enemy_id == "droid_tall" or enemy_id == "droid_sawbox"
+	var is_tall := enemy_id == "droid_tall" or enemy_id.begins_with("mech_")
 	var center := world_pos + Vector3(0.0, 1.05 if is_tall else 0.58, 0.0)
 	var flash_col := Color(0.35, 0.85, 1.0) if is_tall else Color(1.0, 0.55, 0.16)
 	spawn_explosion_burst(scene_root, center, 2.8 if is_tall else 2.0, flash_col, 12 if is_tall else 8)

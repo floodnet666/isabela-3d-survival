@@ -142,7 +142,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _choose_move_and_attack(dist: float, dir: Vector3, _delta: float) -> void:
-	var has_ranged := enemy_id == "droid_tall" or enemy_id == "droid_spider"
+	var has_ranged := enemy_id == "droid_tall" or enemy_id == "mech_leela" or enemy_id == "mech_george"
 	var melee_r := float(_cfg.get("melee_range_m", 2.1) if has_ranged else _cfg.get("attack_range_m", 1.55))
 
 	if dist <= melee_r and _cooldown_left <= 0.0:
@@ -168,7 +168,7 @@ func _choose_move_and_attack(dist: float, dir: Vector3, _delta: float) -> void:
 
 
 func _execute_attack(dist: float, dir: Vector3) -> void:
-	var has_ranged := enemy_id == "droid_tall" or enemy_id == "droid_spider"
+	var has_ranged := enemy_id == "droid_tall" or enemy_id == "mech_leela" or enemy_id == "mech_george"
 	if _pending_attack == "melee":
 		_cooldown_left = float(_cfg.get("melee_cooldown_s", 1.60) if has_ranged else _cfg.get("attack_cooldown_s", 1.15))
 		var melee_r := float(_cfg.get("melee_range_m", 2.1) if has_ranged else _cfg.get("attack_range_m", 1.55)) + 0.45
@@ -177,7 +177,7 @@ func _execute_attack(dist: float, dir: Vector3) -> void:
 			_player.call("take_damage", dmg, dir * 6.0)
 	elif _pending_attack == "ranged":
 		_cooldown_left = float(_cfg.get("ranged_cooldown_s", 2.10))
-		if enemy_id == "droid_spider":
+		if enemy_id == "mech_leela" or enemy_id == "mech_george":
 			_variants.fire_spider_cannon(_player, _cfg, _dmg_mult, _projectiles_parent)
 		else:
 			_fire_plasma_bolt()

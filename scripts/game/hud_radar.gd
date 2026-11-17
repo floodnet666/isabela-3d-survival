@@ -108,9 +108,13 @@ func _draw_enemy_blip(center: Vector2, rad: float, p_pos: Vector3, yaw: float, e
 	match eid:
 		"droid_tall":
 			draw_circle(pos, 4.0, Color(0.20, 0.90, 1.0, 0.92))
-		"droid_spider":
+		"mech_leela":
 			draw_circle(pos, 4.0, Color(0.85, 0.30, 0.95, 0.92))
-		"droid_sawbox":
+		"mech_mike":
+			draw_circle(pos, 4.2, Color(1.0, 0.42, 0.22, 0.95))
+		"mech_stan":
 			draw_circle(pos, 4.5, Color(1.0, 0.22, 0.22, 0.95))
+		"mech_george":
+			draw_circle(pos, 4.8, Color(0.95, 0.15, 0.55, 0.95))
 		_:
 			draw_circle(pos, 3.0, Color(1.0, 0.58, 0.18, 0.90))

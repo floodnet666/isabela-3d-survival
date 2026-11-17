@@ -246,7 +246,8 @@ func _on_score_changed(sc: int, kl: int) -> void:
 func _on_hp_changed(cur: float, mx: float) -> void:
 	_hp_bar.max_value = maxf(1.0, mx)
 	_hp_bar.value = cur
-	_hp_lbl.text = "HP %d / %d" % [roundi(cur), roundi(mx)]
+	var sh: float = float(_player.get("shield_hp")) if _player != null and "shield_hp" in _player else 0.0
+	_hp_lbl.text = "HP %d / %d  •  ESCUDO %d" % [roundi(cur), roundi(mx), roundi(sh)] if sh > 0.5 else "HP %d / %d" % [roundi(cur), roundi(mx)]
 func _on_player_damaged(_amt: float, _kb: Vector3) -> void:
 	_vig_left = 0.28
 func _on_dash_changed(chg: int, mx: int, prog: float) -> void:

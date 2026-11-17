@@ -96,7 +96,7 @@ func _test_orbital_drop_pods() -> bool:
 	pod2.configure(Vector3(-5, 0, 5), null, 10, pod_cfg)
 	pod2._process(0.05) # lands
 	pod2._process(3.1)  # opens
-	ok = _assert(str(st2["opened_id"]) == "droid_spider", "Wave 10 pod opens droid_spider") and ok
+	ok = _assert(str(st2["opened_id"]) == "mech_leela", "Wave 10 pod opens mech_leela") and ok
 	return ok
 
 

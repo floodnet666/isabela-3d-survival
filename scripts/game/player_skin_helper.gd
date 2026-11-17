@@ -95,11 +95,30 @@ static func _apply_submesh_or_tint(model: Node3D, skin_id: String, mode: String)
 			mi.material_override = mat
 
 
+static func attach_helmet_on_player(player: Node3D, helmet_id: String) -> void:
+	if player == null:
+		return
+	var model := player.get_node_or_null("VisualRoot/SK_Isabela") as Node3D
+	if model != null:
+		_attach_helmet(model, helmet_id)
+
+
+static func _set_hair_visible(model: Node3D, vis: bool) -> void:
+	for m in model.find_children("*", "MeshInstance3D", true, false):
+		var mi := m as MeshInstance3D
+		if "hair" in mi.name.to_lower():
+			mi.visible = vis
+
+
 static func _attach_helmet(model: Node3D, helmet_id: String) -> void:
 	var old_att := model.find_child("EquippedHelmetAttachment", true, false)
 	if old_att != null:
+		if old_att.get_parent() != null:
+			old_att.get_parent().remove_child(old_att)
 		old_att.queue_free()
-	if not HELMET_PATHS.has(helmet_id):
+	var has_helmet := HELMET_PATHS.has(helmet_id)
+	_set_hair_visible(model, not has_helmet)
+	if not has_helmet:
 		return
 	var hpath: String = HELMET_PATHS[helmet_id]
 	if not ResourceLoader.exists(hpath):
@@ -123,6 +142,8 @@ static func _attach_helmet(model: Node3D, helmet_id: String) -> void:
 	var helmet := ps.instantiate() as Node3D
 	if helmet == null:
 		return
+	helmet.position = Vector3(0.0, -0.185, 0.015)
+	helmet.scale = Vector3(1.0, 1.0, 1.0)
 	var att := BoneAttachment3D.new()
 	att.name = "EquippedHelmetAttachment"
 	att.bone_name = skel.get_bone_name(head_idx)

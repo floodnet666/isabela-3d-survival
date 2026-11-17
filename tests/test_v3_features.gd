@@ -95,18 +95,21 @@ func _test_new_enemies_and_wave_progression() -> bool:
 	var ok := true
 	var small_hp := float(db.get_enemy_cfg("droid_small").get("base_hp", 0.0))
 	var tall_hp := float(db.get_enemy_cfg("droid_tall").get("base_hp", 0.0))
-	var spider_hp := float(db.get_enemy_cfg("droid_spider").get("base_hp", 0.0))
-	var sawbox_hp := float(db.get_enemy_cfg("droid_sawbox").get("base_hp", 0.0))
+	var spider_hp := float(db.get_enemy_cfg("mech_leela").get("base_hp", 0.0))
+	var sawbox_hp := float(db.get_enemy_cfg("mech_mike").get("base_hp", 0.0))
 
 	ok = ok and _check(sawbox_hp > spider_hp and spider_hp > tall_hp and tall_hp > small_hp,
-		"HP ordering sawbox(%.1f) > spider(%.1f) > tall(%.1f) > small(%.1f)" % [sawbox_hp, spider_hp, tall_hp, small_hp])
+		"HP ordering mech_mike(%.1f) > mech_leela(%.1f) > tall(%.1f) > small(%.1f)" % [sawbox_hp, spider_hp, tall_hp, small_hp])
 
 	var w4 := db.get_wave_spec(4)
 	var w5 := db.get_wave_spec(5)
 	var w10 := db.get_wave_spec(10)
-	ok = ok and _check(int(w4.get("spider_count", -1)) == 0 and int(w4.get("sawbox_count", -1)) == 0, "Wave 4 has no spider/sawbox")
-	ok = ok and _check(int(w5.get("spider_count", 0)) >= 1 and int(w5.get("sawbox_count", -1)) == 0, "Wave 5 introduces droid_spider")
-	ok = ok and _check(int(w10.get("spider_count", 0)) >= 1 and int(w10.get("sawbox_count", 0)) >= 1, "Wave 10 has both droid_spider and droid_sawbox")
+	var m4: Dictionary = w4.get("mech_counts", {})
+	var m5: Dictionary = w5.get("mech_counts", {})
+	var m10: Dictionary = w10.get("mech_counts", {})
+	ok = ok and _check(int(m4.get("mech_leela", 0)) == 0 and int(m4.get("mech_mike", 0)) == 0, "Wave 4 has no mech_leela/mech_mike")
+	ok = ok and _check(int(m5.get("mech_leela", 0)) >= 1 and int(m5.get("mech_mike", 0)) == 0, "Wave 5 introduces mech_leela")
+	ok = ok and _check(int(m10.get("mech_leela", 0)) >= 1 and int(m10.get("mech_mike", 0)) >= 1, "Wave 10 has both mech_leela and mech_mike")
 
 	var host := Node3D.new()
 	root.add_child(host)
@@ -124,9 +127,9 @@ func _test_new_enemies_and_wave_progression() -> bool:
 	spawner.queue_wave(w10)
 	ok = ok and _check(spawner.get_pending_spawn_count() == int(w10.get("total_enemies", 0)), "WaveSpawner queues all Wave 10 enemies")
 
-	var spider_scene := load("res://scenes/game/droid_spider.tscn") as PackedScene
-	var sawbox_scene := load("res://scenes/game/droid_sawbox.tscn") as PackedScene
-	ok = ok and _check(spider_scene != null and sawbox_scene != null, "Spider and Sawbox scenes load")
+	var spider_scene := load("res://scenes/game/mech_leela.tscn") as PackedScene
+	var sawbox_scene := load("res://scenes/game/mech_mike.tscn") as PackedScene
+	ok = ok and _check(spider_scene != null and sawbox_scene != null, "Mech Leela and Mike scenes load")
 	if spider_scene != null and sawbox_scene != null:
 		var s_inst := spider_scene.instantiate()
 		var b_inst := sawbox_scene.instantiate()
@@ -134,10 +137,10 @@ func _test_new_enemies_and_wave_progression() -> bool:
 		b_inst.position = Vector3(-8.0, 0.0, 0.0)
 		entities.add_child(s_inst)
 		entities.add_child(b_inst)
-		s_inst.configure_from_balance("droid_spider", db, w5, player_stub)
-		b_inst.configure_from_balance("droid_sawbox", db, w10, player_stub)
+		s_inst.configure_from_balance("mech_leela", db, w5, player_stub)
+		b_inst.configure_from_balance("mech_mike", db, w10, player_stub)
 		await process_frame
-		ok = ok and _check(s_inst.current_hp > 0.0 and b_inst.current_hp > s_inst.current_hp, "Instantiated sawbox HP > spider HP")
+		ok = ok and _check(s_inst.current_hp > 0.0 and b_inst.current_hp > s_inst.current_hp, "Instantiated mech_mike HP > mech_leela HP")
 
 	host.queue_free()
 	await process_frame

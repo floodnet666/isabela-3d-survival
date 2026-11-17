@@ -188,6 +188,7 @@ func _fire_piercing_laser(origin: Vector3, beam_start: Vector3, dir: Vector3, sh
 		q.exclude = excluded
 		var hit := space.intersect_ray(q)
 		if hit.is_empty():
+			end_pos = origin + dir * max_r
 			break
 		end_pos = hit["position"]
 		if not _apply_ray_hit(hit, origin, dir, shot, false):

@@ -15,10 +15,20 @@ var _saw_hum_left: float = 0.8
 var _burst_remaining: int = 0
 var _burst_timer: float = 0.0
 var _step_sfx_cd: float = 0.0
+var _mech_anim: AnimationPlayer
+var _mech_last_anim: String = ""
 
 
 func bind(enemy: CharacterBody3D) -> void:
 	_enemy = enemy
+	_mech_anim = enemy.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if _mech_anim != null:
+		for loop_name in ["Idle", "Walk", "Run"]:
+			if _mech_anim.has_animation(loop_name):
+				_mech_anim.get_animation(loop_name).loop_mode = Animation.LOOP_LINEAR
+		if _mech_anim.has_animation("Idle"):
+			_mech_anim.play("Idle")
+			_mech_last_anim = "Idle"
 	_cannon_pivot = enemy.get_node_or_null("VisualRoot/DorsalCannonPivot") as Node3D
 	_cannon_muzzle = enemy.get_node_or_null("VisualRoot/DorsalCannonPivot/CannonMuzzle") as Marker3D
 	_saw_l = enemy.get_node_or_null("VisualRoot/SawPivotL") as Node3D
@@ -46,10 +56,32 @@ func bind(enemy: CharacterBody3D) -> void:
 
 
 func tick(delta: float, enemy_id: String, player: Node3D, cfg: Dictionary, dmg_mult: float, proj_parent: Node3D, h_spd: float, stride_phase: float, is_windup: bool) -> void:
-	if enemy_id == "droid_spider":
+	if enemy_id.begins_with("mech_"):
+		_tick_mech(delta, player, cfg, dmg_mult, proj_parent, h_spd, is_windup)
+	elif enemy_id == "droid_spider":
 		_tick_spider(delta, player, cfg, dmg_mult, proj_parent, h_spd, stride_phase)
 	elif enemy_id == "droid_sawbox":
 		_tick_sawbox(delta, player, cfg, dmg_mult, h_spd, is_windup)
+
+
+func _tick_mech(delta: float, player: Node3D, cfg: Dictionary, dmg_mult: float, proj_parent: Node3D, h_spd: float, is_windup: bool) -> void:
+	if _burst_remaining > 0:
+		_burst_timer -= delta
+		if _burst_timer <= 0.0:
+			_burst_remaining -= 1
+			_burst_timer = float(cfg.get("burst_interval_s", 0.16))
+			_spawn_spider_bolt(player, cfg, dmg_mult, proj_parent)
+	if _mech_anim == null or not is_instance_valid(_mech_anim):
+		return
+	var target := "Idle"
+	if is_windup:
+		var is_ranged := str(cfg.get("attack_type", "")) == "ranged_cannon"
+		target = "Shoot" if is_ranged and _mech_anim.has_animation("Shoot") else ("Punch" if _mech_anim.has_animation("Punch") else "Idle")
+	elif h_spd > 0.35 and _mech_anim.has_animation("Run"):
+		target = "Run"
+	if target != _mech_last_anim and _mech_anim.has_animation(target):
+		_mech_anim.play(target, 0.12)
+		_mech_last_anim = target
 
 
 func fire_spider_cannon(player: Node3D, cfg: Dictionary, dmg_mult: float, proj_parent: Node3D) -> void:
