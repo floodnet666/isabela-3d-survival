@@ -72,7 +72,7 @@ func _bind_scene_nodes() -> void:
 		for m in _ship.find_children("*", "MeshInstance3D", true, false):
 			(m as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	WeaponVFXRef.warmup(self); DestructionVFXRef.warmup(self)
-	add_child(preload("res://scripts/game/day_night_cycle.gd").new())
+	add_child(preload("res://scripts/game/day_night_cycle.gd").new()); add_child(preload("res://scripts/game/biome_manager.gd").new())
 
 	var water := get_node_or_null("WaterPlane") as MeshInstance3D
 	if water != null and water.get_active_material(0) is ShaderMaterial:

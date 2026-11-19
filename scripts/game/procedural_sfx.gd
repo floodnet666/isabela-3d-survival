@@ -87,6 +87,8 @@ static func make_sfx(sfx_id: String) -> AudioStreamWAV:
 			dur = 0.22
 		"upgrade_appear":
 			dur = 0.45
+		"tractor_beam":
+			dur = 1.25
 		"metal_click":
 			dur = 0.08
 	var n := maxi(64, int(dur * float(SR_SFX)))
@@ -213,4 +215,11 @@ static func _sample_sfx(id: String, t: float, u: float, rng: RandomNumberGenerat
 			var e_boom := sin(TAU * lerpf(150.0, 30.0, pow(u, 0.4)) * t) * 0.70 * exp(-u * 3.8)
 			var debris := rng.randf_range(-1.0, 1.0) * 0.55 * exp(-u * 4.5)
 			return pdown + e_boom + debris
+		"tractor_beam":
+			var env := sin(u * PI)
+			var shimmer := 0.5 + 0.5 * sin(TAU * 14.0 * t)
+			var f1 := lerpf(320.0, 980.0, pow(u, 0.75))
+			var bell := sin(TAU * f1 * t) * 0.34 + sin(TAU * f1 * 1.5 * t) * 0.24 + sin(TAU * f1 * 2.02 * t) * 0.16 * shimmer
+			var air := rng.randf_range(-1.0, 1.0) * 0.12 * shimmer
+			return (bell + air) * env * 0.90
 	return sin(TAU * 440.0 * t) * exp(-u * 8.0) * 0.4

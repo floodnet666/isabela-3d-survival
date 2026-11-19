@@ -1,6 +1,6 @@
 class_name ArenaElevators
 extends Node3D
-## Slow-moving vertical sci-fi elevator platforms around the playable arena.
+## Slow-moving vertical sci-fi elevator platforms around the playable arena with anti-crush & anti-trap protection.
 
 const PLATFORM_SIZE := Vector3(4.2, 0.45, 4.2)
 const MIN_Y := 0.35
@@ -107,11 +107,90 @@ func _physics_process(delta: float) -> void:
 		var body := p["body"] as AnimatableBody3D
 		if is_instance_valid(body):
 			var xz: Vector2 = p["base_xz"]
-			body.position = Vector3(xz.x, _compute_y(float(p["phase"]), _time), xz.y)
+			var prev_y := body.position.y
+			var new_y := _compute_y(float(p["phase"]), _time)
+			_protect_entities_under_platform(body, p["half_extent"] as Vector2, prev_y, new_y, delta)
+			body.position = Vector3(xz.x, new_y, xz.y)
+
+
+func _protect_entities_under_platform(body: AnimatableBody3D, he: Vector2, prev_y: float, new_y: float, delta: float) -> void:
+	if not is_inside_tree():
+		return
+	var top_pos := body.global_position
+	var bottom_y := new_y - PLATFORM_SIZE.y
+	var descending := new_y < prev_y
+	for grp in ["player", "enemies"]:
+		for n in get_tree().get_nodes_in_group(grp):
+			var cb := n as CharacterBody3D
+			if cb == null or not is_instance_valid(cb) or not cb.is_inside_tree():
+				continue
+			var ep := cb.global_position
+			var dx := ep.x - top_pos.x
+			var dz := ep.z - top_pos.z
+			if absf(dx) > he.x + 0.38 or absf(dz) > he.y + 0.38:
+				continue
+			# Only act if entity is underneath the deck surface (not standing on top)
+			if ep.y >= new_y - 0.16:
+				continue
+			var clearance := bottom_y - ep.y
+			if clearance <= 1.88:
+				# Hard anti-trap rescue: push cleanly outside nearest edge or lift onto deck top
+				var exit_pos := _compute_edge_exit(top_pos, he, ep)
+				if _is_exit_spot_clear(exit_pos):
+					cb.global_position = exit_pos
+				else:
+					cb.global_position = Vector3(ep.x, new_y + 0.12, ep.z)
+					cb.velocity.y = maxf(0.0, cb.velocity.y)
+			elif descending and clearance <= 2.35:
+				# Proactive lateral nudge out from underneath descending platform before contact
+				var out_dir := _compute_outward_dir(dx, dz)
+				cb.global_position += out_dir * (9.5 * delta)
+
+
+func _compute_outward_dir(dx: float, dz: float) -> Vector3:
+	if absf(dx) < 0.05 and absf(dz) < 0.05:
+		return Vector3(1.0, 0.0, 0.0)
+	if absf(dx) >= absf(dz):
+		return Vector3(1.0 if dx >= 0.0 else -1.0, 0.0, 0.0)
+	return Vector3(0.0, 0.0, 1.0 if dz >= 0.0 else -1.0)
+
+
+func _compute_edge_exit(top_pos: Vector3, he: Vector2, ep: Vector3) -> Vector3:
+	var dx := ep.x - top_pos.x
+	var dz := ep.z - top_pos.z
+	var rem_x := (he.x + 0.72) - absf(dx)
+	var rem_z := (he.y + 0.72) - absf(dz)
+	if rem_x <= rem_z:
+		var sx := 1.0 if dx >= 0.0 else -1.0
+		return Vector3(top_pos.x + sx * (he.x + 0.72), maxf(0.06, ep.y), ep.z)
+	var sz := 1.0 if dz >= 0.0 else -1.0
+	return Vector3(ep.x, maxf(0.06, ep.y), top_pos.z + sz * (he.y + 0.72))
+
+
+func _is_exit_spot_clear(pos: Vector3) -> bool:
+	var w3d := get_world_3d()
+	if w3d == null or w3d.direct_space_state == null:
+		return true
+	var q := PhysicsShapeQueryParameters3D.new()
+	var cyl := CylinderShape3D.new()
+	cyl.radius = 0.42
+	cyl.height = 1.5
+	q.shape = cyl
+	q.transform = Transform3D(Basis.IDENTITY, pos + Vector3(0.0, 0.95, 0.0))
+	q.collision_mask = 1
+	return w3d.direct_space_state.intersect_shape(q, 1).is_empty()
 
 
 func get_platform_count() -> int:
 	return _platforms.size()
+
+
+func is_in_platform_footprint(world_pos: Vector3, margin: float = 0.6) -> bool:
+	for pdef in PLATFORM_DEFS:
+		var c: Vector3 = pdef["pos"]
+		if absf(world_pos.x - c.x) <= PLATFORM_SIZE.x * 0.5 + margin and absf(world_pos.z - c.z) <= PLATFORM_SIZE.z * 0.5 + margin:
+			return true
+	return false
 
 
 func get_ranged_spawn_position(rng: RandomNumberGenerator) -> Vector3:

@@ -5,7 +5,7 @@ Jogo de ação e sobrevivência em ondas 3D desenvolvido em **Godot Engine `4.7.
 ---
 
 ## Visão Geral do Gameplay
-- **Arena (`res://scenes/game/playable_arena.tscn`):** Bacia costeira de água rasa (`32m` de raio) com reflexos/ondulações por shader (`shallow_mirror_water.gdshader`), cercada por dunas e rochas de cobertura, sob a nave-mãe orbital `SM_Ship`.
+- **Arena Multi-Bioma Procedural (WFC + 5 Mundos):** A cada **5 ondas**, a nave-mãe `SM_Ship` desce e teletransporta a jogadora com um raio trator entre **5 biomas sorteados aleatoriamente** (`Costa Espelhada`, `Dunas da Pirâmide Solar`, `Interior da Nave-Mãe`, `Geleira Criogênica` e `Caldeira Vulcânica Obsidiana`), com ciclo Dia/Noite (`1 min = 2h`), shaders `Forward+`, clima atmosférico e elevadores móveis.
 - **Inimigos com IK (`TwoBoneIK3D`):**
   - **Droide Batedor (`SK_Droid_Small`):** Ágil corpo a corpo.
   - **Droide Sentinela (`SK_Droid_Tall`):** Blindado, introduzido na Onda 2, dispara projéteis de plasma defletíveis pelo Sabre de Luz e executa ataque pesado em curta distância.
@@ -51,9 +51,7 @@ Jogo de ação e sobrevivência em ondas 3D desenvolvido em **Godot Engine `4.7.
 
 ## Como Rodar o Jogo
 1. Abra o projeto (`project.godot`) no **Godot 4.7.2-stable**.
-2. No painel **FileSystem**, abra **`res://scenes/game/playable_arena.tscn`**.
-3. Pressione **`F6`** (ou clique em *Run Current Scene*).
-   > Nota: O botão *Play Project* (`F5`) abre `res://scenes/test_fase1_helmets.tscn` definida em `project.godot` para preservar as cenas originais de validação das fases 1–6. Para testar o jogo completo, rode sempre `playable_arena.tscn`.
+2. Pressione **`F5`** (*Play Project*, abre `main_menu.tscn` → `playable_arena.tscn`) ou abra `res://scenes/game/playable_arena.tscn` e pressione **`F6`** para ir direto à arena.
 
 ---
 
@@ -78,26 +76,15 @@ Jogo de ação e sobrevivência em ondas 3D desenvolvido em **Godot Engine `4.7.
 
 ---
 
-## Como Rodar a Suíte de Testes (9 Suítes Headless)
-Antes de enviar qualquer Pull Request, execute todas as 9 suítes automatizadas via terminal (ajuste o caminho do executável Godot 4.7.2 para o seu sistema):
+## Como Rodar a Suíte de Testes (21 Suítes Headless)
+Antes de enviar qualquer Pull Request, execute todas as suítes automatizadas via terminal (ajuste o caminho do executável Godot 4.7.2 para o seu sistema):
 
 **Windows (PowerShell):**
 ```powershell
 $godot = "D:\Godot\Godot_v4.7.2-stable_win64_console.exe"
-$tests = @(
-    'tests\test_balance_and_upgrades.gd',
-    'tests\test_combat_core.gd',
-    'tests\test_player_enemy_weapons.gd',
-    'tests\test_spawner_projectiles_pickups.gd',
-    'tests\test_hud_and_arena_loop.gd',
-    'tests\test_playable_arena_e2e.gd',
-    'tests\test_v2_camera_anims_fps.gd',
-    'tests\test_gamepad_support.gd',
-    'tests\test_jacket_and_weapon_grip.gd'
-)
-foreach ($t in $tests) {
-    & $godot --headless --path . --script "res://$($t -replace '\\', '/')"
-    if ($LASTEXITCODE -ne 0) { exit 1 }
+Get-ChildItem tests\test_*.gd | Sort-Object Name | ForEach-Object {
+    & $godot --headless --path . --script "res://tests/$($_.Name)"
+    if ($LASTEXITCODE -ne 0) { throw "Falha em $($_.Name) (EXIT=$LASTEXITCODE)" }
 }
 Write-Host "ALL_TESTS_PASSED" -ForegroundColor Green
 ```

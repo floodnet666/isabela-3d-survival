@@ -93,6 +93,10 @@ func get_bosses_cfg() -> Dictionary:
 	return _data.get("bosses", {})
 
 
+func get_biomes_cfg() -> Dictionary:
+	return _data.get("biomes", {})
+
+
 func get_drop_pod_cfg() -> Dictionary:
 	return get_bosses_cfg().get("drop_pod", {})
 

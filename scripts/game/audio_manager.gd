@@ -173,7 +173,7 @@ func _preload_default_streams() -> void:
 		"droid_sawbox_hum", "droid_sawbox_impact", "enemy_hit", "enemy_death",
 		"droid_hit", "droid_explode", "barrel_explode", "electric_shock",
 		"pickup", "level_up", "player_hurt", "wave_start",
-		"upgrade_appear", "metal_click",
+		"upgrade_appear", "metal_click", "tractor_beam",
 	]:
 		_resolve_sfx_stream(sfx_id)
 

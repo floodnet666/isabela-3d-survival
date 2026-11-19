@@ -10,45 +10,51 @@ Este arquivo fornece contexto técnico estruturado para agentes de IA (Antigravi
 - **Arte 3D / Pipeline:** Blender `5.2+` (`.blend` em `blend_sources/`, exportação `.glb` Y-up em `assets/`)
 - **Fonte Única de Balanceamento:** `data/game_balance.json` (lido por `scripts/game/balance_db.gd`)
 - **Cena Inicial (`run/main_scene` em `project.godot`):** `res://scenes/game/main_menu.tscn` (Menu Principal → `res://scenes/game/playable_arena.tscn`)
-- **CI Automático (`.github/workflows/godot-tests.yml`):** roda em todo `push` e `pull_request` para `main`, aplicando trava `< 300` linhas em `scripts/game/*.gd` e executando todas as `19` suítes `tests/test_*.gd` em Linux headless (`lfs: false`).
+- **CI Automático (`.github/workflows/godot-tests.yml`):** roda em todo `push` e `pull_request` para `main`, aplicando trava `< 300` linhas em `scripts/game/*.gd` e executando todas as `21` suítes `tests/test_*.gd` em Linux headless (`lfs: false`).
 
 ---
 
-## 2. Mapa de Diretórios e Arquitetura (Estado Atual — `46` Scripts)
+## 2. Mapa de Diretórios e Arquitetura (Estado Atual — `52` Scripts)
 
 ```text
 res://
-├── .github/workflows/            # godot-tests.yml (trava < 300 linhas + 19 suítes headless)
+├── .github/workflows/            # godot-tests.yml (trava < 300 linhas + 21 suítes headless)
 ├── addons/assets2godot/          # Assets2Godot v0.8.2 (GPLv2) — habilitado em project.godot
 ├── assets/                       # Assets .glb/.gltf Y-up + texturas VRAM Compressed (compress/mode=2) + audio .ogg
+│   ├── ENV_CoastProps/           # Props PBR da Mirror Coast (SM_CoastBarrier, SM_CoastCrate, SM_CoastPylon, SM_CoastRockCluster)
 │   ├── ENV_DesertCoast/          # Terreno/dunas, pedras de cobertura (SM_DesertDunes, SM_ShoreRocks)
+│   ├── ENV_SandPyramid/          # Bioma WFC 2: Dunas da Pirâmide Solar (BACKDROP, FLOOR, 6 TILE_*.glb)
+│   ├── ENV_MothershipInterior/   # Bioma WFC 3: Hangar da Nave-Mãe + Reator (BACKDROP, FLOOR, 6 TILE_*.glb)
+│   ├── ENV_CryoGlacier/          # Bioma WFC 4: Geleira Criogênica + Aurora (BACKDROP, FLOOR, 6 TILE_*.glb)
+│   ├── ENV_VolcanicCaldera/      # Bioma WFC 5: Caldeira Vulcânica Obsidiana (BACKDROP, FLOOR, 6 TILE_*.glb)
+│   ├── textures/pbr/             # 7 packs PBR CC0 Poly Haven (Diffuse, nor_gl, Rough) cacheados por BiomeMaterialLibrary
 │   ├── SK_Isabela/               # SK_Isabela.glb (base protegida), SK_Isabela_Leeloo.glb (84 ossos, coroa de cabelo corrigida), FPS_Arms.glb
-│   ├── SK_Boss_Reaper/           # SK_Boss_Reaper.glb (rigado com Run; Valkyrie/Anubis usam fallback até seus .glb entrarem)
+│   ├── SK_Boss_Reaper/           # SK_Boss_Reaper.glb (rigado com 7 animações; Valkyrie/Anubis usam fallback até seus .glb entrarem)
 │   ├── SK_Mech_{Leela,Mike,Stan,George}/ # 4 mechs animados Quaternius (.gltf com 18–20 animações; Ondas 5/10/15/20)
 │   ├── SK_Droid_Small/           # Droide Batedor (melee, TwoBoneIK3D)
 │   ├── SK_Droid_Tall/            # Droide Sentinela (ranged/melee, TwoBoneIK3D)
-│   ├── SM_Ship/                  # Nave-mãe orbital (sombras desativadas em runtime para desempenho)
+│   ├── SM_Ship/                  # Nave-mãe orbital (sombras desativadas + cutscene de raio trator entre biomas)
 │   ├── SM_Crate_Health/, SM_Crate_Ammo/, SM_Helmet_A/, SM_Helmet_B/
 │   ├── SM_Weapon_*/              # 7 slots: Pistol (1), Sniper (2), Shotgun (3), RocketLauncher (4), Katana (5), LaserGun (6), SMG (7)
 │   ├── audio/music/ & sfx/       # punk_rock_loop.ogg + 15+ SFX .ogg (com fallback procedural em ProceduralSFX)
 │   └── ui/main_menu_bg.png       # Arte do Menu Principal (mantida sem compressão destrutiva)
-├── blend_sources/                # Fontes .blend (rastreadas via Git LFS; .gdignore presente)
-├── data/game_balance.json        # Fonte única de verdade: arena, player, 7 armas, pickups (health/ammo/helmets), droids, 4 mechs, bosses, skins, upgrades
+├── blend_sources/                # Fontes .blend (rastreadas via Git LFS; .gdignore presente) + gen_biome_kits.py
+├── data/game_balance.json        # Fonte única de verdade: arena, 5 biomas/WFC, player, 7 armas, pickups, droids, 4 mechs, bosses, skins, upgrades
 ├── docs/TRILHA_3_PLAN.md         # Especificação técnica da Trilha 3 + refs T-pose em docs/references/
 ├── scenes/
 │   ├── main_isabela_scene.tscn   # Cena showcase Fase 6 (PROIBIDO alterar sem pedido explícito)
 │   ├── test_fase1..5_*.tscn      # Cenas de validação das Fases 1-5 (PROIBIDO alterar)
 │   └── game/                     # main_menu, playable_arena, boss_sentinel, droid_small_enemy, droid_tall_enemy, mech_{leela,mike,stan,george}
-├── scripts/game/                 # 46 scripts modulares (TODOS estritamente < 300 linhas)
-├── shaders/                      # shallow_mirror_water.gdshader + M_ShallowMirrorWater.tres
-└── tests/                        # 19 suítes de testes headless Godot
+├── scripts/game/                 # 52 scripts modulares (TODOS estritamente < 300 linhas)
+├── shaders/                      # shallow_mirror_water.gdshader + M_ShallowMirrorWater.tres + 10 shaders biome_*.gdshader
+└── tests/                        # 21 suítes de testes headless Godot
 ```
 
 ### Módulos Principais (`scripts/game/*.gd`)
 | Grupo | Scripts e Responsabilidades |
 |---|---|
 | **Core & Dados** | `balance_db.gd`, `game_manager.gd`, `upgrade_system.gd`, `input_setup.gd`, `settings_manager.gd` (inclui `graphics_quality` `0..2` + `user://unlocks.cfg`) |
-| **Arena, Clima & Sci-Fi** | `arena_coordinator.gd` (`299`L), `day_night_cycle.gd` (`145`L, `1 min = 2h`), `arena_props.gd`, `explosive_barrel.gd`, `arena_electric_perimeter.gd`, `arena_elevators.gd`, `wave_spawner.gd` |
+| **Arena, Biomas WFC & Clima** | `arena_coordinator.gd` (`299`L), `biome_manager.gd` (`214`L, sorteio sem repetição a cada 5 ondas), `biome_arena_builder.gd` (`282`L, `MultiMesh` + OBBs exatos), `wfc_solver.gd` (`209`L, `forced_open_cells`), `biome_material_library.gd` (`228`L, cache PBR/GLSL), `biome_weather_vfx.gd` (`151`L), `ship_tractor_cutscene.gd` (`190`L), `day_night_cycle.gd` (`195`L, `1 min = 2h` + perfis por bioma), `arena_props.gd` (`250`L, `set_props_active()`), `explosive_barrel.gd`, `arena_electric_perimeter.gd`, `arena_elevators.gd` (`225`L, anti-esmagamento), `wave_spawner.gd` (`286`L, spawns OBB + física 3D) |
 | **Player, Skins & Escudo** | `player_controller.gd` (`298`L, `shield_hp`), `player_skin_helper.gd` (`151`L, skins + `SM_Helmet_A/B` 30% escudo + ocultação do cabelo), `player_camera_rig.gd`, `player_animator.gd` (`299`L), `player_combat_helper.gd`, `fps_viewmodel.gd`, `fps_optic_helper.gd` |
 | **Armas & Pool `O(1)`** | `weapon_loadout.gd` (`292`L), `weapon_manager.gd` (`298`L), `weapon_pool_helper.gd` (pré-instancia as 7 armas TPS/FPS no boot), `projectile_controller.gd`, `pickup_crate.gd` |
 | **Inimigos, Bosses & VFX** | `enemy_droid.gd` (`296`L), `enemy_variants_helper.gd` (driver `AnimationPlayer` dos Mechs), `boss_sentinel.gd`, `boss_visuals_helper.gd`, `orbital_drop_pod.gd`, `weapon_vfx.gd` & `droid_destruction_vfx.gd` |
@@ -118,5 +124,10 @@ Get-ChildItem scripts\game\*.gd | ForEach-Object {
     - **Ciclo Dia/Noite (`day_night_cycle.gd`)** na proporção **`1 min real = 2h no jogo`** + relógio no topo do HUD;
     - Correção da coroa de cabelo no `SK_Isabela_Leeloo.glb` via Blender (scalp recuado + mechas reais duplicadas);
     - **Fechamento Trilha 3 (Pontos 1, 3, 4 & Escudo Reaper):** `SK_Boss_Reaper.glb` com 7 animações (`Guard_Stance`, `Sword_Slam`, `Stagger_Core`, `Enrage_Roar`), `TorusMesh` no escudo de guarda (sem retângulo azul), VFX âmbar no `Shadow Blink` do Anubis e suporte completo a skin jogável de Boss (`WeaponSocket` via `Forearm.R` + escala `1.72 m` + `tick_boss_skin_anim`).
+  - **Sessão Atual (5 Biomas Procedurais WFC + PBR/GLSL + Raio Trator + Colisões):**
+    - Sistema WFC 2D (`wfc_solver.gd`, `11×11`) com **5 biomas distintos** sorteados aleatoriamente sem repetição consecutiva desde a Onda 1 e trocados a cada `5` ondas via cutscene de raio trator da `SM_Ship` (`ship_tractor_cutscene.gd` + SFX `tractor_beam`): `desert_coast`, `sand_dunes_pyramid`, `mothership_interior`, `cryo_glacier`, `volcanic_caldera`;
+    - Gerador Blender (`blend_sources/gen_biome_kits.py`) + **7 packs PBR CC0 Poly Haven** (`assets/textures/pbr/`) + **10 shaders GLSL `Forward+`** (`shaders/biome_*.gdshader`) + clima dual-layer (`biome_weather_vfx.gd`);
+    - Correções críticas de colisão/física (`test_collision_and_spawns.gd`): `ArenaProps.set_props_active()` elimina colisores fantasmas nos biomas WFC, `TILE_WallCorner` com L-shape exato + OBBs rotacionados, `forced_open_cells` em torno dos 4 elevadores, `WaveSpawner._is_spot_clear()` com checagem de física 3D real (`PhysicsShapeQueryParameters3D`) e proteção anti-aprisionamento sob `ArenaElevators`.
 - **Próximas etapas planejadas:**
+  - Refinamento visual de 2º passe nos biomas: água da costa, poeira/neblina na geleira, fumaça e lava animada na caldeira;
   - Adicionar modelos `.glb` finais para `SK_Boss_Valkyrie` e `SK_Boss_Anubis` em `assets/` (seguindo `docs/TRILHA_3_PLAN.md` e `docs/references/`).

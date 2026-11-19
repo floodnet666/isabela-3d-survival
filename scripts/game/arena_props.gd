@@ -1,11 +1,16 @@
 class_name ArenaProps
 extends Node3D
-## Builds Sci-Fi Crepusculo / Neon Industrial tactical cover, comms pylons, wreckage details, and explosive barrels.
+## Builds photorealistic Sci-Fi Mirror Coast tactical cover, comms pylons, wet basalt shore rocks, wreckage details, and explosive barrels.
 
 const ExplosiveBarrelRef := preload("res://scripts/game/explosive_barrel.gd")
+const MaterialLibRef := preload("res://scripts/game/biome_material_library.gd")
 
 const HELMET_A_PATH := "res://assets/SM_Helmet_A/SM_Helmet_A.glb"
 const HELMET_B_PATH := "res://assets/SM_Helmet_B/SM_Helmet_B.glb"
+const COAST_BARRIER_PATH := "res://assets/ENV_CoastProps/SM_CoastBarrier.glb"
+const COAST_CRATE_PATH := "res://assets/ENV_CoastProps/SM_CoastCrate.glb"
+const COAST_PYLON_PATH := "res://assets/ENV_CoastProps/SM_CoastPylon.glb"
+const COAST_ROCKS_PATH := "res://assets/ENV_CoastProps/SM_CoastRockCluster.glb"
 
 var _obstacle_footprints: Array[Dictionary] = []
 var _barrels: Array[ExplosiveBarrelRef] = []
@@ -22,6 +27,7 @@ func build_arena_props() -> void:
 	_built = true
 	_build_tactical_covers()
 	_build_comms_pylons()
+	_build_coast_rocks()
 	_build_wreckage_details()
 	_spawn_explosive_barrels()
 
@@ -40,12 +46,37 @@ func is_position_clear(world_pos: Vector3, margin_m: float = 1.5) -> bool:
 	return true
 
 
+func set_props_active(active: bool) -> void:
+	visible = active
+	for node in find_children("*", "CollisionShape3D", true, false):
+		(node as CollisionShape3D).disabled = not active
+	for co in find_children("*", "CollisionObject3D", true, false):
+		var obj := co as CollisionObject3D
+		if not obj.has_meta("_orig_col_layer"):
+			obj.set_meta("_orig_col_layer", obj.collision_layer)
+		obj.collision_layer = int(obj.get_meta("_orig_col_layer")) if active else 0
+
+
+func _spawn_pbr_glb(parent: Node3D, path: String, scale_v: Vector3 = Vector3.ONE) -> bool:
+	if not ResourceLoader.exists(path):
+		return false
+	var ps := load(path) as PackedScene
+	if ps == null:
+		return false
+	var inst := ps.instantiate() as Node3D
+	if inst == null:
+		return false
+	inst.scale = scale_v
+	MaterialLibRef.apply_to_node(inst)
+	parent.add_child(inst)
+	return true
+
+
 func _build_tactical_covers() -> void:
 	var hull := _make_mat(Color(0.16, 0.19, 0.24), 0.78, 0.36)
 	var trim_cyan := _make_emissive_mat(Color(0.12, 0.88, 1.0), 2.2)
 	var trim_amber := _make_emissive_mat(Color(1.0, 0.52, 0.14), 1.9)
 
-	# Inner-mid ring low barriers (clear of player spawn at (0,0,0), radius >= 7.5 m)
 	var barriers := [
 		{"pos": Vector3(-8.2, 0.0, -5.8), "yaw": 28.0, "size": Vector3(3.6, 1.22, 0.65), "trim": trim_cyan},
 		{"pos": Vector3(8.5, 0.0, -4.6), "yaw": -32.0, "size": Vector3(3.6, 1.22, 0.65), "trim": trim_cyan},
@@ -53,9 +84,8 @@ func _build_tactical_covers() -> void:
 		{"pos": Vector3(7.9, 0.0, 7.2), "yaw": 34.0, "size": Vector3(3.4, 1.18, 0.65), "trim": trim_amber},
 	]
 	for b in barriers:
-		_add_static_block(b["pos"], float(b["yaw"]), b["size"], hull, b["trim"])
+		_add_static_prop(b["pos"], float(b["yaw"]), b["size"], COAST_BARRIER_PATH, Vector3(3.6, 1.22, 0.65), hull, b["trim"])
 
-	# Outer cargo crate clusters & downed ship bulkheads
 	var crates := [
 		{"pos": Vector3(-14.8, 0.0, -11.5), "yaw": 18.0, "size": Vector3(2.5, 1.75, 2.2), "trim": trim_amber},
 		{"pos": Vector3(15.2, 0.0, -12.0), "yaw": -14.0, "size": Vector3(2.6, 1.85, 2.1), "trim": trim_cyan},
@@ -64,7 +94,7 @@ func _build_tactical_covers() -> void:
 		{"pos": Vector3(14.0, 0.0, 12.6), "yaw": -42.0, "size": Vector3(2.4, 1.65, 2.0), "trim": trim_amber},
 	]
 	for c in crates:
-		_add_static_block(c["pos"], float(c["yaw"]), c["size"], hull, c["trim"])
+		_add_static_prop(c["pos"], float(c["yaw"]), c["size"], COAST_CRATE_PATH, Vector3(2.5, 1.75, 2.1), hull, c["trim"])
 
 
 func _build_comms_pylons() -> void:
@@ -92,31 +122,40 @@ func _build_comms_pylons() -> void:
 		cs.position = Vector3(0.0, 2.9, 0.0)
 		body.add_child(cs)
 
-		var mast := MeshInstance3D.new()
-		var bm := BoxMesh.new()
-		bm.size = Vector3(0.68, 5.8, 0.68)
-		mast.mesh = bm
-		mast.position = Vector3(0.0, 2.9, 0.0)
-		mast.material_override = dark_steel
-		body.add_child(mast)
-
-		var beacon := MeshInstance3D.new()
-		var bmesh := BoxMesh.new()
-		bmesh.size = Vector3(0.76, 1.35, 0.76)
-		beacon.mesh = bmesh
-		beacon.position = Vector3(0.0, 4.65, 0.0)
-		beacon.material_override = _make_emissive_mat(col, 2.6)
-		beacon.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		body.add_child(beacon)
+		if not _spawn_pbr_glb(body, COAST_PYLON_PATH, Vector3.ONE):
+			var mast := MeshInstance3D.new()
+			var bm := BoxMesh.new()
+			bm.size = Vector3(0.68, 5.8, 0.68)
+			mast.mesh = bm
+			mast.position = Vector3(0.0, 2.9, 0.0)
+			mast.material_override = dark_steel
+			body.add_child(mast)
 
 		var light := OmniLight3D.new()
 		light.light_color = col
-		light.light_energy = 2.4
-		light.omni_range = 14.0
+		light.light_energy = 2.8
+		light.omni_range = 16.0
 		light.position = Vector3(0.0, 4.8, 0.0)
 		body.add_child(light)
-
 		_obstacle_footprints.append({"center": Vector2(pos.x, pos.z), "radius": 1.0})
+
+
+func _build_coast_rocks() -> void:
+	var clusters := [
+		{"pos": Vector3(-12.5, -0.05, -2.5), "yaw": 20.0, "sc": Vector3(1.4, 1.1, 1.4)},
+		{"pos": Vector3(13.2, -0.05, -1.8), "yaw": -45.0, "sc": Vector3(1.5, 1.2, 1.3)},
+		{"pos": Vector3(-10.8, -0.05, -15.5), "yaw": 75.0, "sc": Vector3(1.8, 1.4, 1.6)},
+		{"pos": Vector3(11.4, -0.05, -16.2), "yaw": 120.0, "sc": Vector3(1.6, 1.3, 1.5)},
+		{"pos": Vector3(-16.5, -0.05, 8.5), "yaw": -15.0, "sc": Vector3(1.7, 1.2, 1.5)},
+	]
+	for cl in clusters:
+		var holder := Node3D.new()
+		holder.position = cl["pos"]
+		holder.rotation_degrees = Vector3(0.0, float(cl["yaw"]), 0.0)
+		if _spawn_pbr_glb(holder, COAST_ROCKS_PATH, cl["sc"]):
+			add_child(holder)
+		else:
+			holder.queue_free()
 
 
 func _build_wreckage_details() -> void:
@@ -141,7 +180,6 @@ func _build_wreckage_details() -> void:
 
 
 func _spawn_explosive_barrels() -> void:
-	# 6 tactical barrels, including two chain-reaction pairs near central lanes
 	var spots := [
 		Vector3(-5.2, 0.0, -9.2),
 		Vector3(-8.4, 0.0, -10.4),
@@ -158,7 +196,7 @@ func _spawn_explosive_barrels() -> void:
 		_obstacle_footprints.append({"center": Vector2(pos.x, pos.z), "radius": 0.9})
 
 
-func _add_static_block(pos: Vector3, yaw_deg: float, size: Vector3, hull_mat: StandardMaterial3D, trim_mat: StandardMaterial3D) -> void:
+func _add_static_prop(pos: Vector3, yaw_deg: float, size: Vector3, glb_path: String, ref_sz: Vector3, hull_mat: StandardMaterial3D, trim_mat: StandardMaterial3D) -> void:
 	var sb := StaticBody3D.new()
 	sb.collision_layer = 1
 	sb.collision_mask = 0
@@ -173,22 +211,23 @@ func _add_static_block(pos: Vector3, yaw_deg: float, size: Vector3, hull_mat: St
 	cs.position = Vector3(0.0, size.y * 0.5, 0.0)
 	sb.add_child(cs)
 
-	var body := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = size
-	body.mesh = bm
-	body.position = Vector3(0.0, size.y * 0.5, 0.0)
-	body.material_override = hull_mat
-	sb.add_child(body)
-
-	var strip := MeshInstance3D.new()
-	var sm := BoxMesh.new()
-	sm.size = Vector3(size.x + 0.04, 0.09, size.z + 0.04)
-	strip.mesh = sm
-	strip.position = Vector3(0.0, size.y * 0.78, 0.0)
-	strip.material_override = trim_mat
-	strip.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	sb.add_child(strip)
+	var sc := Vector3(size.x / ref_sz.x, size.y / ref_sz.y, size.z / ref_sz.z)
+	if not _spawn_pbr_glb(sb, glb_path, sc):
+		var body := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = size
+		body.mesh = bm
+		body.position = Vector3(0.0, size.y * 0.5, 0.0)
+		body.material_override = hull_mat
+		sb.add_child(body)
+		var strip := MeshInstance3D.new()
+		var sm := BoxMesh.new()
+		sm.size = Vector3(size.x + 0.04, 0.09, size.z + 0.04)
+		strip.mesh = sm
+		strip.position = Vector3(0.0, size.y * 0.78, 0.0)
+		strip.material_override = trim_mat
+		strip.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		sb.add_child(strip)
 
 	var footprint_r := Vector2(size.x * 0.5, size.z * 0.5).length() + 0.35
 	_obstacle_footprints.append({"center": Vector2(pos.x, pos.z), "radius": footprint_r})
