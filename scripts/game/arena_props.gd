@@ -78,13 +78,13 @@ func _build_tactical_covers() -> void:
 	var trim_amber := _make_emissive_mat(Color(1.0, 0.52, 0.14), 1.9)
 
 	var barriers := [
-		{"pos": Vector3(-8.2, 0.0, -5.8), "yaw": 28.0, "size": Vector3(3.6, 1.22, 0.65), "trim": trim_cyan},
-		{"pos": Vector3(8.5, 0.0, -4.6), "yaw": -32.0, "size": Vector3(3.6, 1.22, 0.65), "trim": trim_cyan},
-		{"pos": Vector3(-7.4, 0.0, 7.6), "yaw": -24.0, "size": Vector3(3.4, 1.18, 0.65), "trim": trim_amber},
-		{"pos": Vector3(7.9, 0.0, 7.2), "yaw": 34.0, "size": Vector3(3.4, 1.18, 0.65), "trim": trim_amber},
+		{"pos": Vector3(-8.2, 0.0, -5.8), "yaw": 28.0, "size": Vector3(3.6, 1.22, 0.86), "trim": trim_cyan},
+		{"pos": Vector3(8.5, 0.0, -4.6), "yaw": -32.0, "size": Vector3(3.6, 1.22, 0.86), "trim": trim_cyan},
+		{"pos": Vector3(-7.4, 0.0, 7.6), "yaw": -24.0, "size": Vector3(3.4, 1.18, 0.86), "trim": trim_amber},
+		{"pos": Vector3(7.9, 0.0, 7.2), "yaw": 34.0, "size": Vector3(3.4, 1.18, 0.86), "trim": trim_amber},
 	]
 	for b in barriers:
-		_add_static_prop(b["pos"], float(b["yaw"]), b["size"], COAST_BARRIER_PATH, Vector3(3.6, 1.22, 0.65), hull, b["trim"])
+		_add_static_prop(b["pos"], float(b["yaw"]), b["size"], COAST_BARRIER_PATH, Vector3(3.6, 1.22, 0.86), hull, b["trim"])
 
 	var crates := [
 		{"pos": Vector3(-14.8, 0.0, -11.5), "yaw": 18.0, "size": Vector3(2.5, 1.75, 2.2), "trim": trim_amber},
@@ -116,7 +116,7 @@ func _build_comms_pylons() -> void:
 
 		var cs := CollisionShape3D.new()
 		var cyl := CylinderShape3D.new()
-		cyl.radius = 0.52
+		cyl.radius = 0.98
 		cyl.height = 5.8
 		cs.shape = cyl
 		cs.position = Vector3(0.0, 2.9, 0.0)
@@ -137,7 +137,7 @@ func _build_comms_pylons() -> void:
 		light.omni_range = 16.0
 		light.position = Vector3(0.0, 4.8, 0.0)
 		body.add_child(light)
-		_obstacle_footprints.append({"center": Vector2(pos.x, pos.z), "radius": 1.0})
+		_obstacle_footprints.append({"center": Vector2(pos.x, pos.z), "radius": 1.25})
 
 
 func _build_coast_rocks() -> void:
@@ -149,11 +149,22 @@ func _build_coast_rocks() -> void:
 		{"pos": Vector3(-16.5, -0.05, 8.5), "yaw": -15.0, "sc": Vector3(1.7, 1.2, 1.5)},
 	]
 	for cl in clusters:
-		var holder := Node3D.new()
-		holder.position = cl["pos"]
+		var holder := StaticBody3D.new()
+		holder.collision_layer = 1
+		holder.collision_mask = 0
+		var pos: Vector3 = cl["pos"]
+		var sc: Vector3 = cl["sc"]
+		holder.position = pos
 		holder.rotation_degrees = Vector3(0.0, float(cl["yaw"]), 0.0)
-		if _spawn_pbr_glb(holder, COAST_ROCKS_PATH, cl["sc"]):
+		if _spawn_pbr_glb(holder, COAST_ROCKS_PATH, sc):
+			var cs := CollisionShape3D.new()
+			var bx := BoxShape3D.new()
+			bx.size = Vector3(3.8 * sc.x, 1.25 * sc.y, 2.65 * sc.z)
+			cs.shape = bx
+			cs.position = Vector3(0.25 * sc.x, 0.62 * sc.y, 0.0)
+			holder.add_child(cs)
 			add_child(holder)
+			_obstacle_footprints.append({"center": Vector2(pos.x, pos.z), "radius": maxf(2.1 * sc.x, 1.5 * sc.z)})
 		else:
 			holder.queue_free()
 

@@ -160,6 +160,15 @@ func _test_arena_props_and_scifi_mood() -> bool:
 	await process_frame
 	await process_frame
 
+	var bm := arena.find_child("BiomeManager", true, false)
+	var gm: Node = arena.get("game_manager")
+	if bm != null and gm != null:
+		var bcfg: Dictionary = gm.get("balance_db").call("get_biomes_cfg")
+		var types: Dictionary = bcfg.get("types", {})
+		if types.has("desert_coast"):
+			bm.call("_swap_biome_now", "desert_coast", types["desert_coast"] as Dictionary, bcfg, 101)
+			await process_frame
+
 	var ok := true
 	var props_node := arena.get_node_or_null("ArenaProps") as Node3D
 	ok = ok and _check(props_node != null, "ArenaProps node is mounted in PlayableArena")

@@ -5,7 +5,7 @@ Jogo de ação e sobrevivência em ondas 3D desenvolvido em **Godot Engine `4.7.
 ---
 
 ## Visão Geral do Gameplay
-- **Arena Multi-Bioma Procedural (WFC + 5 Mundos):** A cada **5 ondas**, a nave-mãe `SM_Ship` desce e teletransporta a jogadora com um raio trator entre **5 biomas sorteados aleatoriamente** (`Costa Espelhada`, `Dunas da Pirâmide Solar`, `Interior da Nave-Mãe`, `Geleira Criogênica` e `Caldeira Vulcânica Obsidiana`), com ciclo Dia/Noite (`1 min = 2h`), shaders `Forward+`, clima atmosférico e elevadores móveis.
+- **Arena Multi-Bioma Procedural (WFC + 5 Mundos):** A cada **5 ondas**, a nave-mãe `SM_Ship` desce e teletransporta a jogadora com um raio trator entre **5 biomas sorteados aleatoriamente** (`Costa Espelhada`, `Dunas da Pirâmide Solar`, `Interior da Nave-Mãe`, `Geleira Criogênica` e `Caldeira Vulcânica Obsidiana`), com conectividade garantida por arcos/portas WFC, ciclo Dia/Noite (`1 min = 2h`), shaders `Forward+` nítidos (sem neblina/fumaça), micro-partículas climáticas e elevadores móveis.
 - **Inimigos com IK (`TwoBoneIK3D`):**
   - **Droide Batedor (`SK_Droid_Small`):** Ágil corpo a corpo.
   - **Droide Sentinela (`SK_Droid_Tall`):** Blindado, introduzido na Onda 2, dispara projéteis de plasma defletíveis pelo Sabre de Luz e executa ataque pesado em curta distância.

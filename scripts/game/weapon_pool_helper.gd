@@ -84,6 +84,26 @@ func activate(def: Dictionary, socket: Node3D, is_fps: bool, optic_helper: RefCo
 static func sanitize_fps_animations(anim_player: AnimationPlayer) -> void:
 	if anim_player == null:
 		return
+	var arms_root := anim_player.get_parent()
+	if arms_root != null:
+		var skels: Array[Node] = arms_root.find_children("*", "Skeleton3D", true, false)
+		if arms_root is Skeleton3D:
+			skels.append(arms_root)
+		for node in skels:
+			var skel := node as Skeleton3D
+			if skel == null:
+				continue
+			for i in range(skel.get_bone_count()):
+				var rest := skel.get_bone_rest(i)
+				var b := rest.basis
+				if b.x.length_squared() < 0.0001 or b.y.length_squared() < 0.0001 or b.z.length_squared() < 0.0001 or absf(b.determinant()) < 0.0001:
+					rest.basis = Basis.IDENTITY
+					skel.set_bone_rest(i, rest)
+					skel.set_bone_pose_scale(i, Vector3.ONE)
+		for ch in arms_root.find_children("*", "Node3D", true, false):
+			var n3 := ch as Node3D
+			if n3 != null and (absf(n3.scale.x) < 0.001 or absf(n3.scale.y) < 0.001 or absf(n3.scale.z) < 0.001):
+				n3.scale = Vector3.ONE
 	for anim_name in anim_player.get_animation_list():
 		var anim := anim_player.get_animation(anim_name)
 		if anim == null:

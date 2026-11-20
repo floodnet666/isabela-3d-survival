@@ -116,8 +116,11 @@ static func apply_video(tree: SceneTree = null) -> void:
 				var env := (we as WorldEnvironment).environment
 				if env != null:
 					env.ssr_enabled = q >= 1
-					env.ssr_max_steps = 48 if q >= 2 else 24
+					env.ssr_max_steps = 32 if q >= 2 else 16
+					env.ssao_enabled = q >= 1
 					env.glow_enabled = q >= 1
+					env.fog_enabled = false
+					env.volumetric_fog_enabled = false
 			for dl in cur.find_children("*", "DirectionalLight3D", true, false):
 				(dl as DirectionalLight3D).shadow_enabled = q >= 1
 	if DisplayServer.get_name() == "headless":

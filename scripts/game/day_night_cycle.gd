@@ -11,20 +11,16 @@ var _env: Environment
 var _sky: ProceduralSkyMaterial
 var _clock_lbl: Label
 var _hud_accum: float = 0.0
+var _light_accum: float = 0.0
 var _biome_sky_tint: Color = Color.WHITE
-var _biome_fog_tint: Color = Color.WHITE
-var _biome_fog_density: float = -1.0
 var _biome_sun_tint: Color = Color.WHITE
 var _biome_sun_mult: float = 1.0
 var _biome_indoor: bool = false
 var _biome_glow: float = 0.72
-var _biome_scatter: float = 0.35
 
 
-func set_biome_palette(sky_tint: Color, fog_tint: Color, fog_density: float) -> void:
+func set_biome_palette(sky_tint: Color, _fog_tint: Color, _fog_density: float) -> void:
 	_biome_sky_tint = sky_tint
-	_biome_fog_tint = fog_tint
-	_biome_fog_density = fog_density
 	_biome_sun_tint = Color.WHITE
 	_biome_sun_mult = 1.0
 	_biome_indoor = false
@@ -33,13 +29,10 @@ func set_biome_palette(sky_tint: Color, fog_tint: Color, fog_density: float) -> 
 
 func set_biome_profile(cfg: Dictionary) -> void:
 	_biome_sky_tint = Color.html(str(cfg.get("sky_tint_hex", "#FFFFFF")))
-	_biome_fog_tint = Color.html(str(cfg.get("fog_tint_hex", "#38BDF8")))
-	_biome_fog_density = float(cfg.get("fog_density", 0.0055))
 	_biome_sun_tint = Color.html(str(cfg.get("sun_tint_hex", "#FFFFFF")))
 	_biome_sun_mult = float(cfg.get("sun_energy_mult", 1.0))
 	_biome_indoor = bool(cfg.get("indoor_mode", false))
 	_biome_glow = float(cfg.get("glow_intensity", 0.72))
-	_biome_scatter = float(cfg.get("fog_sun_scatter", 0.35))
 	_apply_lighting()
 
 
@@ -73,7 +66,10 @@ func get_phase_name() -> String:
 
 func _process(delta: float) -> void:
 	time_of_day_hours = fposmod(time_of_day_hours + delta * HOURS_PER_REAL_SEC, 24.0)
-	_apply_lighting()
+	_light_accum += delta
+	if _light_accum >= 0.15:
+		_light_accum = 0.0
+		_apply_lighting()
 	_hud_accum += delta
 	if _hud_accum >= 0.25:
 		_hud_accum = 0.0
@@ -96,6 +92,8 @@ func _bind_targets() -> void:
 		_env.ssao_intensity = 1.75
 		_env.glow_enabled = true
 		_env.glow_bloom = 0.28
+		_env.fog_enabled = false
+		_env.volumetric_fog_enabled = false
 		we.environment = _env
 		if _env.sky != null and _env.sky.sky_material is ProceduralSkyMaterial:
 			var sky_res := _env.sky.duplicate() as Sky
@@ -142,12 +140,8 @@ func _apply_lighting() -> void:
 	if _env != null:
 		_env.ambient_light_energy = 0.58 if _biome_indoor else float(s["ambient"])
 		_env.glow_intensity = _biome_glow
-		_env.fog_sun_scatter = 0.05 if _biome_indoor else _biome_scatter
-		var base_fog: Color = s["fog_col"] as Color
-		var fog_blend := 0.85 if _biome_indoor else 0.58
-		_env.fog_light_color = base_fog.lerp(_biome_fog_tint, fog_blend) if _biome_fog_density > 0.0 else base_fog
-		if _biome_fog_density > 0.0:
-			_env.fog_density = _biome_fog_density
+		_env.fog_enabled = false
+		_env.volumetric_fog_enabled = false
 	if _sky != null:
 		if _biome_indoor:
 			_sky.sky_top_color = Color(0.14, 0.24, 0.38)

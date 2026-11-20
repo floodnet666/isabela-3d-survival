@@ -25,6 +25,12 @@ func configure(cam_cfg: Dictionary) -> void:
 	_cfg = cam_cfg
 	if _spring_arm == null:
 		_spring_arm = get_node_or_null("SpringArm3D") as SpringArm3D
+	if _spring_arm != null:
+		var arm_shape := SphereShape3D.new()
+		arm_shape.radius = 0.24
+		_spring_arm.shape = arm_shape
+		_spring_arm.collision_mask = 1
+		_spring_arm.margin = 0.12
 	if _camera == null:
 		_camera = get_node_or_null("SpringArm3D/Camera3D") as Camera3D
 	if _camera != null:

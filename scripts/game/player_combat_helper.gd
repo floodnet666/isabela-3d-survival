@@ -83,7 +83,7 @@ static func ensure_capsule(player: CharacterBody3D) -> void:
 		return
 	var cs := CollisionShape3D.new()
 	var cap := CapsuleShape3D.new()
-	cap.radius = 0.32
+	cap.radius = 0.44
 	cap.height = 1.72
 	cs.shape = cap
 	cs.position = Vector3(0.0, 0.86, 0.0)

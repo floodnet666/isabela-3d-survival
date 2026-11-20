@@ -58,6 +58,9 @@ func clear_biome() -> void:
 	_open_tile_centers.clear()
 	_barrels.clear()
 	if _runtime_root != null and is_instance_valid(_runtime_root):
+		_runtime_root.visible = false
+		for p in _runtime_root.find_children("*", "GPUParticles3D", true, false):
+			(p as GPUParticles3D).emitting = false
 		_runtime_root.queue_free()
 		_runtime_root = null
 
@@ -78,6 +81,7 @@ func build_biome(biome_id: String, biome_cfg: Dictionary, root_cfg: Dictionary, 
 
 	var use_wfc := bool(biome_cfg.get("use_wfc", true))
 	if not use_wfc:
+		WeatherVFXRef.build_weather(_runtime_root, str(biome_cfg.get("weather", "")))
 		return {"ok": true, "biome_id": biome_id, "tiles_placed": 0}
 
 	var grid_n := int(root_cfg.get("grid_size", 11))
@@ -92,19 +96,25 @@ func build_biome(biome_id: String, biome_cfg: Dictionary, root_cfg: Dictionary, 
 	var grid: Array = res["grid"]
 	var asset_dir := str(biome_cfg.get("asset_dir", ""))
 	var transforms_by_tile: Dictionary = {}
+	var tile_meshes: Dictionary = {}
+	var tile_aabbs: Dictionary = {}
 	var barrel_spots: Array[Vector3] = []
 
 	for z in range(grid_n):
 		for x in range(grid_n):
 			var cell: Dictionary = grid[z][x]
 			var tid := str(cell["id"])
+			if not tile_aabbs.has(tid):
+				var tm := _load_tile_mesh(asset_dir, tid)
+				tile_meshes[tid] = tm
+				tile_aabbs[tid] = tm.get_aabb() if tm != null else AABB()
 			var rot_y := -float(int(cell["rot"])) * PI * 0.5
 			var pos := Vector3(float(x) * tile_sz - half, 0.0, float(z) * tile_sz - half)
 			var xf := Transform3D(Basis(Vector3.UP, rot_y), pos)
 			if not transforms_by_tile.has(tid):
 				transforms_by_tile[tid] = []
 			(transforms_by_tile[tid] as Array).append(xf)
-			_add_tile_collision(tid, pos, rot_y, tile_sz)
+			_add_tile_collision(tid, pos, rot_y, tile_sz, tile_aabbs[tid] as AABB)
 			if tid == "TILE_Open" and pos.length() <= 27.5:
 				_open_tile_centers.append(pos)
 				if pos.length() >= 7.5 and pos.length() <= 22.0 and not _overlaps_elevator(pos, 3.0):
@@ -112,7 +122,7 @@ func build_biome(biome_id: String, biome_cfg: Dictionary, root_cfg: Dictionary, 
 
 	for tid in transforms_by_tile.keys():
 		var xfs: Array = transforms_by_tile[tid]
-		var mesh := _load_tile_mesh(asset_dir, str(tid))
+		var mesh := tile_meshes.get(tid) as Mesh
 		if mesh != null:
 			var mm := MultiMesh.new()
 			mm.transform_format = MultiMesh.TRANSFORM_3D
@@ -195,52 +205,41 @@ func _load_tile_mesh(asset_dir: String, tile_id: String) -> Mesh:
 	return mesh
 
 
-func _add_tile_collision(tid: String, pos: Vector3, rot_y: float, tile_sz: float) -> void:
-	if tid == "TILE_Open":
-		return
-	var b := Basis(Vector3.UP, rot_y)
-	if tid == "TILE_CoverLow":
-		_make_box_collider(pos, rot_y, Vector3(3.25, 1.25, 1.0), 0.625)
-	elif tid == "TILE_Pillar":
-		_make_box_collider(pos, rot_y, Vector3(1.85, 4.8, 1.85), 2.4)
-	elif tid == "TILE_WallStraight":
-		_make_box_collider(pos, rot_y, Vector3(tile_sz, 2.5, 1.15), 1.25)
+func _add_tile_collision(tid: String, pos: Vector3, rot_y: float, tile_sz: float, aabb: AABB = AABB()) -> void:
+	if tid == "TILE_Open": return
+	var b := Basis(Vector3.UP, rot_y); var has_aabb := aabb.size.length_squared() > 0.01; var ac := aabb.get_center() if has_aabb else Vector3.ZERO
+	if tid == "TILE_CoverLow" or tid == "TILE_Pillar" or tid == "TILE_WallStraight":
+		var min_w := tile_sz if tid == "TILE_WallStraight" else 0.0
+		var min_h := 4.8 if tid == "TILE_Pillar" else (2.6 if tid == "TILE_WallStraight" else 1.25)
+		var min_d := 1.28 if tid == "TILE_WallStraight" else 0.0
+		var fb := Vector3(tile_sz, 2.6, 1.35) if tid == "TILE_WallStraight" else (Vector3(2.1, 4.8, 2.1) if tid == "TILE_Pillar" else Vector3(3.6, 1.3, 1.4))
+		var sz := Vector3(maxf(min_w, aabb.size.x + 0.12), maxf(min_h, aabb.size.y), maxf(min_d, aabb.size.z + 0.12)) if has_aabb else fb
+		_make_box_collider(pos + b * Vector3(ac.x, 0.0, ac.z), rot_y, sz, sz.y * 0.5)
 	elif tid == "TILE_WallCorner":
-		# Exact L-shaped colliders matching East (+X) and North (-Z) visual arms — zero invisible SW box!
-		_make_box_collider(pos + b * Vector3(1.25, 0.0, 0.0), rot_y, Vector3(3.5, 2.5, 1.15), 1.25)
-		_make_box_collider(pos + b * Vector3(0.0, 0.0, -1.25), rot_y, Vector3(1.15, 2.5, 3.5), 1.25)
+		var ex := maxf(3.0, aabb.end.x) if has_aabb else 3.0; var nz := minf(-3.0, aabb.position.z) if has_aabb else -3.0
+		var arm_t := clampf(maxf(1.28, aabb.end.z * 1.45), 1.28, 2.20) if has_aabb else 1.28; var wh := maxf(2.6, aabb.size.y) if has_aabb else 2.6
+		_make_box_collider(pos + b * Vector3(ex * 0.5, 0.0, 0.0), rot_y, Vector3(ex, wh, arm_t), wh * 0.5)
+		_make_box_collider(pos + b * Vector3(0.0, 0.0, nz * 0.5), rot_y, Vector3(arm_t, wh, -nz), wh * 0.5)
+		var cw := clampf((-aabb.position.x) * 2.0 + 0.10, 1.32, 2.95) if has_aabb else 1.32
+		var cd := clampf(aabb.end.z * 2.0 + 0.10, 1.32, 2.95) if has_aabb else 1.32
+		_make_box_collider(pos, rot_y, Vector3(cw, wh, cd), wh * 0.5)
 	elif tid == "TILE_Arch":
-		_make_box_collider(pos + b * Vector3(-2.28, 0.0, 0.0), rot_y, Vector3(1.15, 4.0, 1.25), 2.0)
-		_make_box_collider(pos + b * Vector3(2.28, 0.0, 0.0), rot_y, Vector3(1.15, 4.0, 1.25), 2.0)
-		_make_box_collider(pos, rot_y, Vector3(5.6, 0.85, 1.30), 4.25, false)
+		var dz := maxf(1.36, aabb.size.z + 0.12) if has_aabb else 1.40; var hx := maxf(3.0, maxf(-aabb.position.x, aabb.end.x)) if has_aabb else 3.0
+		var gap := 1.32; var pw := maxf(0.85, hx - gap); var px := (hx + gap) * 0.5; var ah := maxf(4.0, aabb.size.y * 0.85) if has_aabb else 4.0
+		_make_box_collider(pos + b * Vector3(-px, 0.0, 0.0), rot_y, Vector3(pw, ah, dz), ah * 0.5)
+		_make_box_collider(pos + b * Vector3(px, 0.0, 0.0), rot_y, Vector3(pw, ah, dz), ah * 0.5)
+		_make_box_collider(pos, rot_y, Vector3(hx * 2.0, 0.90, dz), maxf(4.2, aabb.size.y - 0.5) if has_aabb else 4.25, false)
 
 
 func _make_box_collider(pos: Vector3, rot_y: float, sz: Vector3, cy: float, blocks_ground: bool = true) -> void:
-	var body := StaticBody3D.new()
-	body.collision_layer = 1
-	body.collision_mask = 0
-	body.position = pos
-	body.rotation.y = rot_y
-	var cs := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = sz
-	cs.shape = box
-	cs.position = Vector3(0.0, cy, 0.0)
-	body.add_child(cs)
-	_runtime_root.add_child(body)
-	if blocks_ground:
-		_obstacle_obbs.append({"center": Vector2(pos.x, pos.z), "hx": sz.x * 0.5, "hz": sz.z * 0.5, "rot_y": rot_y})
+	var body := StaticBody3D.new(); body.collision_layer = 1; body.collision_mask = 0; body.position = pos; body.rotation.y = rot_y
+	var cs := CollisionShape3D.new(); var box := BoxShape3D.new(); box.size = sz; cs.shape = box; cs.position = Vector3(0.0, cy, 0.0)
+	body.add_child(cs); _runtime_root.add_child(body)
+	if blocks_ground: _obstacle_obbs.append({"center": Vector2(pos.x, pos.z), "hx": sz.x * 0.5, "hz": sz.z * 0.5, "rot_y": rot_y})
 
 
 func _add_omni(pos: Vector3, col: Color, energy: float, rng: float, shadows: bool = false) -> void:
-	var l := OmniLight3D.new()
-	l.light_color = col
-	l.light_energy = energy
-	l.omni_range = rng
-	l.omni_attenuation = 1.4
-	l.shadow_enabled = shadows
-	l.position = pos
-	_runtime_root.add_child(l)
+	var l := OmniLight3D.new(); l.light_color = col; l.light_energy = energy; l.omni_range = rng; l.omni_attenuation = 1.4; l.shadow_enabled = shadows; l.position = pos; _runtime_root.add_child(l)
 
 
 func _spawn_biome_lights(biome_id: String, biome_cfg: Dictionary) -> void:

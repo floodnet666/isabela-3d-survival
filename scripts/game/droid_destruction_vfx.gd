@@ -100,6 +100,7 @@ static func spawn_explosion_burst(scene_root: Node, center: Vector3, radius: flo
 	light.light_color = col
 	light.light_energy = 7.5
 	light.omni_range = radius * 3.4
+	light.light_volumetric_fog_energy = 0.0
 	scene_root.add_child(light)
 	light.global_position = center
 	var ltw := light.create_tween()

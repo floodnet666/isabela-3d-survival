@@ -24,6 +24,9 @@ func _run() -> void:
 	await _test_wfc_clear_of_elevators_and_exact_obbs()
 	await _test_spawner_never_spawns_inside_obstacles()
 	await _test_elevator_anti_crush_never_traps_player()
+	await _test_all_biome_colliders_match_visual_aabbs()
+	await _test_coast_rocks_have_colliders_and_toggles()
+	await _test_player_capsule_springarm_and_wall_physics()
 
 	if _failed == 0:
 		print("ALL_TESTS_PASSED: test_collision_and_spawns")
@@ -192,6 +195,126 @@ func _test_elevator_anti_crush_never_traps_player() -> void:
 	var under_footprint := dx < 2.05 and dz < 2.05
 	var trapped_under := under_footprint and (player.global_position.y < ab0.global_position.y - 0.15) and (ab0.global_position.y < 2.2)
 	_check(not trapped_under, "Player must NEVER be trapped under descending elevator (player=%s, plat=%s)" % [str(player.global_position), str(ab0.global_position)])
+
+	root.queue_free()
+	await physics_frame
+
+
+func _test_all_biome_colliders_match_visual_aabbs() -> void:
+	var db := BalanceDBRef.new()
+	db.load_from_file()
+	var bcfg := db.get_biomes_cfg()
+	var types: Dictionary = bcfg.get("types", {})
+	var builder := BiomeBuilderRef.new()
+	get_root().add_child(builder)
+
+	for bid in ["sand_dunes_pyramid", "mothership_interior", "cryo_glacier", "volcanic_caldera"]:
+		var asset_dir := str((types[bid] as Dictionary).get("asset_dir", ""))
+		for tid in ["TILE_CoverLow", "TILE_Pillar", "TILE_WallStraight", "TILE_WallCorner", "TILE_Arch"]:
+			var mesh: Mesh = builder.call("_load_tile_mesh", asset_dir, tid)
+			_check(mesh != null, "Loaded mesh %s/%s" % [bid, tid])
+			if mesh == null:
+				continue
+			var aabb := mesh.get_aabb()
+			builder.clear_biome()
+			builder.call("_ensure_runtime_root_for_test")
+			builder.call("_add_tile_collision", tid, Vector3.ZERO, 0.0, 6.0, aabb)
+			var rt: Node3D = builder.get("_runtime_root")
+			var min_x := 1e9; var max_x := -1e9; var min_z := 1e9; var max_z := -1e9
+			for bnode in rt.find_children("*", "StaticBody3D", true, false):
+				var sb := bnode as StaticBody3D
+				for cn in sb.find_children("*", "CollisionShape3D", true, false):
+					var cs := cn as CollisionShape3D
+					var bx := cs.shape as BoxShape3D
+					if bx == null or cs.position.y > 3.5:
+						continue
+					var cx: float = sb.position.x + cs.position.x
+					var cz: float = sb.position.z + cs.position.z
+					min_x = minf(min_x, cx - bx.size.x * 0.5)
+					max_x = maxf(max_x, cx + bx.size.x * 0.5)
+					min_z = minf(min_z, cz - bx.size.z * 0.5)
+					max_z = maxf(max_z, cz + bx.size.z * 0.5)
+			var ov_x := maxf(min_x - aabb.position.x, aabb.end.x - max_x)
+			var ov_z := maxf(min_z - aabb.position.z, aabb.end.z - max_z)
+			if tid == "TILE_WallCorner":
+				_check(max_x >= aabb.end.x - 0.05 and min_z <= aabb.position.z + 0.05 and min_x <= aabb.position.x + 0.05 and max_z >= aabb.end.z - 0.05,
+					"%s/%s L-arms+corner must cover visual bounds" % [bid, tid])
+				_check(builder.is_position_clear_of_wfc(Vector3(-2.2, 0.0, 2.2), 0.3), "%s/%s open SW quadrant remains clear" % [bid, tid])
+			else:
+				_check(ov_x <= 0.05 and ov_z <= 0.05, "%s/%s visual AABB overhang must be <= 0.05m (ov_x=%.3f, ov_z=%.3f)" % [bid, tid, ov_x, ov_z])
+			if tid == "TILE_Arch":
+				_check(builder.is_position_clear_of_wfc(Vector3.ZERO, 0.45), "%s/TILE_Arch center doorway remains clear for player" % bid)
+
+	builder.queue_free()
+	await physics_frame
+
+
+func _test_coast_rocks_have_colliders_and_toggles() -> void:
+	var ps := load("res://scenes/game/playable_arena.tscn") as PackedScene
+	var arena := ps.instantiate() as Node3D
+	get_root().add_child(arena)
+	for _i in range(4):
+		await physics_frame
+	var bm := arena.find_child("BiomeManager", true, false)
+	var props := arena.get_node_or_null("ArenaProps") as Node3D
+	var gm: Node = arena.get("game_manager")
+	var bcfg: Dictionary = gm.get("balance_db").call("get_biomes_cfg")
+	var types: Dictionary = bcfg.get("types", {})
+
+	bm.call("_swap_biome_now", "desert_coast", types["desert_coast"] as Dictionary, bcfg, 101)
+	await physics_frame
+	var active_near_rock := 0
+	for sb in props.find_children("*", "StaticBody3D", true, false):
+		var sbody := sb as StaticBody3D
+		if sbody.collision_layer == 1 and sbody.position.distance_to(Vector3(-12.5, -0.05, -2.5)) < 0.5:
+			active_near_rock += 1
+	_check(active_near_rock >= 1, "Desert coast rock clusters must have active StaticBody3D colliders")
+
+	bm.call("_swap_biome_now", "cryo_glacier", types["cryo_glacier"] as Dictionary, bcfg, 101)
+	await physics_frame
+	var active_in_wfc := 0
+	for cs in props.find_children("*", "CollisionShape3D", true, false):
+		if not (cs as CollisionShape3D).disabled:
+			active_in_wfc += 1
+	_check(active_in_wfc == 0, "All ArenaProps including coast rocks disabled in cryo_glacier")
+	arena.queue_free()
+	await physics_frame
+
+
+func _test_player_capsule_springarm_and_wall_physics() -> void:
+	var root := Node3D.new()
+	get_root().add_child(root)
+	var floor_b := StaticBody3D.new(); floor_b.collision_layer = 1
+	var fcs := CollisionShape3D.new(); var fb := BoxShape3D.new(); fb.size = Vector3(40, 1, 40)
+	fcs.shape = fb; fcs.position = Vector3(0, -0.5, 0); floor_b.add_child(fcs); root.add_child(floor_b)
+
+	var builder := BiomeBuilderRef.new(); root.add_child(builder)
+	var db := BalanceDBRef.new(); db.load_from_file()
+	var cryo_dir := str((db.get_biomes_cfg().get("types", {})["cryo_glacier"] as Dictionary).get("asset_dir", ""))
+	var wall_mesh: Mesh = builder.call("_load_tile_mesh", cryo_dir, "TILE_WallStraight")
+	var wall_aabb := wall_mesh.get_aabb()
+	builder.call("_ensure_runtime_root_for_test")
+	builder.call("_add_tile_collision", "TILE_WallStraight", Vector3(0.0, 0.0, -4.0), 0.0, 6.0, wall_aabb)
+
+	var p_ps := load("res://scenes/game/player_isabela.tscn") as PackedScene
+	var player := p_ps.instantiate() as CharacterBody3D
+	root.add_child(player)
+	await physics_frame
+	var pcs := player.get_node("CollisionShape3D") as CollisionShape3D
+	var cap := pcs.shape as CapsuleShape3D
+	_check(cap != null and cap.radius >= 0.42, "Player CapsuleShape3D radius >= 0.42 (got %.2f)" % (cap.radius if cap else 0.0))
+	var rig := player.get_node("CameraPivot")
+	rig.call("configure", db.get_player_cfg().get("camera", {}))
+	var arm := rig.get_node("SpringArm3D") as SpringArm3D
+	_check(arm != null and arm.shape != null, "SpringArm3D has collision SphereShape3D against walls")
+
+	player.global_position = Vector3(0.0, 0.05, 0.0)
+	for _f in range(90):
+		player.velocity = Vector3(0.0, -1.0, -6.0)
+		player.move_and_slide()
+		await physics_frame
+	var min_allowed_z := -4.0 + wall_aabb.end.z + 0.40
+	_check(player.global_position.z >= min_allowed_z, "Player stops cleanly outside CryoGlacier visual wall face (z=%.3f >= %.3f)" % [player.global_position.z, min_allowed_z])
 
 	root.queue_free()
 	await physics_frame

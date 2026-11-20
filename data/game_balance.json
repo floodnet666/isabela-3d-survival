@@ -1012,12 +1012,12 @@
     "grid_size": 11,
     "tile_size_m": 6.0,
     "tiles": [
-      { "id": "TILE_Open",         "sockets": ["open", "open", "open", "open"], "weight": 8.0, "allow_rotate": false },
-      { "id": "TILE_CoverLow",     "sockets": ["open", "open", "open", "open"], "weight": 2.4, "allow_rotate": true  },
-      { "id": "TILE_Pillar",       "sockets": ["open", "open", "open", "open"], "weight": 1.3, "allow_rotate": true  },
-      { "id": "TILE_Arch",         "sockets": ["open", "open", "open", "open"], "weight": 0.9, "allow_rotate": true  },
-      { "id": "TILE_WallStraight", "sockets": ["open", "wall", "open", "wall"], "weight": 0.8, "allow_rotate": true  },
-      { "id": "TILE_WallCorner",   "sockets": ["wall", "wall", "open", "open"], "weight": 0.7, "allow_rotate": true  }
+      { "id": "TILE_Open",         "sockets": ["open", "open", "open", "open"], "weight": 8.5, "allow_rotate": false },
+      { "id": "TILE_CoverLow",     "sockets": ["open", "open", "open", "open"], "weight": 2.2, "allow_rotate": true  },
+      { "id": "TILE_Pillar",       "sockets": ["open", "open", "open", "open"], "weight": 1.2, "allow_rotate": true  },
+      { "id": "TILE_Arch",         "sockets": ["open", "wall", "open", "wall"], "weight": 1.5, "allow_rotate": true  },
+      { "id": "TILE_WallStraight", "sockets": ["open", "wall", "open", "wall"], "weight": 1.0, "allow_rotate": true  },
+      { "id": "TILE_WallCorner",   "sockets": ["wall", "wall", "open", "open"], "weight": 0.85, "allow_rotate": true  }
     ],
     "types": {
       "desert_coast": {
@@ -1032,9 +1032,12 @@
         "sun_tint_hex": "#FFC684",
         "sun_energy_mult": 1.42,
         "glow_intensity": 0.62,
-        "fog_sun_scatter": 0.52,
+        "fog_sun_scatter": 0.0,
         "accent_hex": "#38BDF8",
-        "fog_density": 0.0028
+        "fog_density": 0.0,
+        "volumetric_fog_density": 0.0,
+        "volumetric_fog_color_hex": "#A8BCCF",
+        "volumetric_fog_anisotropy": 0.0
       },
       "sand_dunes_pyramid": {
         "display_name": "Dunas da Pirâmide Solar",
@@ -1048,9 +1051,12 @@
         "sun_tint_hex": "#FFD288",
         "sun_energy_mult": 1.44,
         "glow_intensity": 0.62,
-        "fog_sun_scatter": 0.55,
+        "fog_sun_scatter": 0.0,
         "accent_hex": "#FFB830",
-        "fog_density": 0.0032
+        "fog_density": 0.0,
+        "volumetric_fog_density": 0.0,
+        "volumetric_fog_color_hex": "#E6B87A",
+        "volumetric_fog_anisotropy": 0.0
       },
       "mothership_interior": {
         "display_name": "Interior da Nave-Mãe (Reator)",
@@ -1064,9 +1070,12 @@
         "sun_tint_hex": "#8BD8FF",
         "sun_energy_mult": 0.45,
         "glow_intensity": 0.54,
-        "fog_sun_scatter": 0.05,
+        "fog_sun_scatter": 0.0,
         "accent_hex": "#22D3EE",
-        "fog_density": 0.0036
+        "fog_density": 0.0,
+        "volumetric_fog_density": 0.0,
+        "volumetric_fog_color_hex": "#1B526E",
+        "volumetric_fog_anisotropy": 0.0
       },
       "cryo_glacier": {
         "display_name": "Geleira & Ruínas Criogênicas",
@@ -1080,9 +1089,12 @@
         "sun_tint_hex": "#E2F5FF",
         "sun_energy_mult": 1.24,
         "glow_intensity": 0.78,
-        "fog_sun_scatter": 0.35,
+        "fog_sun_scatter": 0.0,
         "accent_hex": "#38E8FF",
-        "fog_density": 0.0040
+        "fog_density": 0.0,
+        "volumetric_fog_density": 0.0,
+        "volumetric_fog_color_hex": "#B4E4FF",
+        "volumetric_fog_anisotropy": 0.0
       },
       "volcanic_caldera": {
         "display_name": "Caldeira Vulcânica Obsidiana",
@@ -1096,9 +1108,12 @@
         "sun_tint_hex": "#FF7638",
         "sun_energy_mult": 0.95,
         "glow_intensity": 0.84,
-        "fog_sun_scatter": 0.40,
+        "fog_sun_scatter": 0.0,
         "accent_hex": "#FF420A",
-        "fog_density": 0.0042
+        "fog_density": 0.0,
+        "volumetric_fog_density": 0.0,
+        "volumetric_fog_color_hex": "#8F3016",
+        "volumetric_fog_anisotropy": 0.0
       }
     }
   }

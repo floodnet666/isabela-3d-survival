@@ -273,7 +273,7 @@ func _play_clip(clip_name: String, blend_s: float, is_oneshot: bool) -> void:
 	if is_oneshot:
 		var anim := _anim_player.get_animation(clip_name)
 		_oneshot_left = anim.length if anim != null else 0.25
-		_anim_player.stop()
+		_anim_player.stop(true)
 		_anim_player.play(clip_name, blend_s)
 	elif _anim_player.current_animation != clip_name or not _anim_player.is_playing():
 		_anim_player.play(clip_name, blend_s)

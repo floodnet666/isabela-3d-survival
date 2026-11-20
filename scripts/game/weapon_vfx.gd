@@ -79,6 +79,7 @@ static func spawn_muzzle_flash(scene_root: Node, pos: Vector3, col: Color) -> vo
 	l.light_color = col
 	l.light_energy = 4.2
 	l.omni_range = 4.8
+	l.light_volumetric_fog_energy = 0.0
 	scene_root.add_child(l)
 	l.global_position = pos
 	var tw := l.create_tween()

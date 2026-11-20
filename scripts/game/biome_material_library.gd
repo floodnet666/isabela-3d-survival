@@ -210,7 +210,10 @@ static func _build_material(n: String) -> Material:
 				"rock_rough": _tex("dark_rock_02", "Rough"),
 			})
 		"MAT_LavaSea":
-			return _shader("biome_lava_sea", {})
+			return _shader("biome_lava_sea", {
+				"crust_normal": _tex("dark_rock_02", "nor_gl"),
+				"crust_rough": _tex("dark_rock_02", "Rough"),
+			})
 		"MAT_VolcanoCone":
 			return _shader("biome_volcano_cone", {
 				"rock_albedo": _tex("dark_rock_02", "Diffuse"),

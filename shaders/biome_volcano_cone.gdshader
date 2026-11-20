@@ -32,12 +32,13 @@ float vnoise(vec2 p) {
 float fbm(vec2 p) {
 	float v = 0.0;
 	float a = 0.5;
-	for (int i = 0; i < 4; i++) {
+	mat2 rot = mat2(vec2(0.8, -0.6), vec2(0.6, 0.8));
+	for (int i = 0; i < 3; i++) {
 		v += a * vnoise(p);
-		p = p * 2.03 + vec2(9.1, 17.3);
+		p = rot * p * 2.03 + vec2(9.1, 17.3);
 		a *= 0.5;
 	}
-	return v;
+	return v / 0.875;
 }
 
 void vertex() {
@@ -51,20 +52,27 @@ void fragment() {
 	vec3 r_nrm = texture(rock_normal, uv).rgb;
 	float r_rgh = clamp(texture(rock_rough, uv).r * 0.8 + 0.2, 0.45, 0.96);
 
-	// 5 jagged incandescent lava channels carving down from the erupting caldera rim
+	// Organic sharp winding FBM-contour lava gullies (~10% of mountain slopes, dark charred basalt elsewhere)
 	vec2 rel = wpos.xz - volcano_center.xz;
 	float ang = atan(rel.y, rel.x);
 	float h_norm = clamp(wpos.y / max(1.0, summit_y), 0.0, 1.0);
-	float meander = (fbm(vec2(ang * 3.8, h_norm * 5.2)) - 0.5) * 0.95;
-	float r1 = smoothstep(0.18, 0.018, abs(sin((ang + meander) * 4.5)));
-	float r2 = smoothstep(0.14, 0.015, abs(sin((ang * 1.7 - meander * 0.8) * 3.5))) * 0.7;
-	float flow_var = smoothstep(0.22, 0.68, fbm(vec2(ang * 2.2, h_norm * 3.2 - TIME * 0.10)));
-	float river_mask = clamp(max(r1, r2), 0.0, 1.0) * smoothstep(0.18, 0.42, h_norm) * flow_var;
+	float downhill_adv = h_norm * 4.2 + TIME * 0.08;
+	vec2 dir_uv = vec2(cos(ang), sin(ang));
+	float warp = (fbm(dir_uv * 2.4 + vec2(downhill_adv * 0.55, 1.7)) - 0.5) * 1.35;
 
-	// Subtle fiery crater rim glow right at summit lip (no blown-out white bulb)
-	float summit_glow = smoothstep(0.90, 0.995, h_norm) * 0.85;
+	float d1 = abs(fbm(vec2(ang * 2.8 + warp, downhill_adv * 0.45)) - 0.5);
+	float d2 = abs(fbm(vec2(ang * 5.2 - warp * 1.1, downhill_adv * 0.85 + 4.2)) - 0.5);
+	float stream_main = smoothstep(0.036, 0.004, d1);
+	float stream_branch = smoothstep(0.026, 0.003, d2) * 0.72;
+	float gully_gate = smoothstep(0.32, 0.68, fbm(dir_uv * 3.1 + vec2(h_norm * 1.6, 4.3)));
+	float river_mask = clamp(max(stream_main, stream_branch) * gully_gate, 0.0, 1.0) * smoothstep(0.24, 0.52, h_norm);
+
+	// Glowing caldera lip at summit edge + subtle ash crater fade
+	float summit_glow = smoothstep(0.92, 0.995, h_norm) * 0.88;
 	float heat = clamp(max(river_mask, summit_glow), 0.0, 1.0);
-	vec3 lava_col = mix(vec3(1.0, 0.18, 0.01), vec3(1.0, 0.72, 0.16), clamp(river_mask * 0.85 + summit_glow * 0.6, 0.0, 1.0));
+	float temp = clamp(river_mask * (0.40 + 0.60 * h_norm) + summit_glow * 0.85, 0.0, 1.0);
+	vec3 lava_col = mix(vec3(0.75, 0.09, 0.008), vec3(1.0, 0.28, 0.02), smoothstep(0.15, 0.60, temp));
+	lava_col = mix(lava_col, vec3(1.0, 0.78, 0.20), smoothstep(0.58, 0.95, temp));
 
 	ALBEDO = mix(r_col, vec3(0.08, 0.02, 0.01), heat);
 	NORMAL_MAP = r_nrm;
